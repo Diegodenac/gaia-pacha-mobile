@@ -23,10 +23,10 @@ import { COLORS } from '@/constants';
 export default function CustomerLayout() {
   const { isAuthenticated, user } = useAuthStore();
 
-  // Auth guard — redirect if not logged in or wrong role
-  if (!isAuthenticated || user?.role !== 'customer') {
-    return <Redirect href="/(auth)/login" />;
-  }
+  // Auth guard bypassed for preview
+  // if (!isAuthenticated || user?.role !== 'customer') {
+  //   return <Redirect href="/(auth)/login" />;
+  // }
 
   return (
     <Tabs

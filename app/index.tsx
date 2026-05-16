@@ -1,27 +1,6 @@
 import { Redirect } from 'expo-router';
-import { useAuthStore } from '@/store/authStore';
 
-/**
- * App root index — acts as the auth/role guard.
- *
- * Routing logic:
- *  - Not authenticated → redirect to /(auth)/login
- *  - Role 'customer'   → redirect to /(customer)
- *  - Role 'ecoservice' → redirect to /(ecoservice)
- *
- * AI Hint: This file ONLY redirects. Keep zero business logic here.
- * The actual tab layouts are in their respective group _layout.tsx files.
- */
 export default function Index() {
-  const { isAuthenticated, user } = useAuthStore();
-
-  if (!isAuthenticated || !user) {
-    return <Redirect href="/(auth)/login" />;
-  }
-
-  if (user.role === 'ecoservice') {
-    return <Redirect href="/(ecoservice)" />;
-  }
-
+  // Bypassed login to show catalog immediately
   return <Redirect href="/(customer)" />;
 }

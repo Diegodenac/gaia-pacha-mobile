@@ -46,12 +46,10 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Auth group — unauthenticated routes */}
-          <Stack.Screen name="(auth)" />
-          {/* Customer tab group */}
+        <Stack screenOptions={{ headerShown: false }} initialRouteName="index">
+          <Stack.Screen name="index" />
           <Stack.Screen name="(customer)" />
-          {/* EcoService tab group */}
+          <Stack.Screen name="(auth)" />
           <Stack.Screen name="(ecoservice)" />
         </Stack>
       </QueryClientProvider>
