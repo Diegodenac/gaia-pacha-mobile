@@ -17,7 +17,7 @@ import { QUERY_KEYS, CACHE_TIMES } from '@/constants';
  */
 export function useCatalogQuery(filters: CatalogFilters = {}) {
   return useQuery({
-    queryKey:  QUERY_KEYS.catalog(filters),
+    queryKey:  QUERY_KEYS.catalog(filters as Record<string, unknown>),
     queryFn:   () => catalogRepository.getProducts(filters),
     staleTime: CACHE_TIMES.MEDIUM,
     // Deduplicate parallel calls to the same filter set (automatic via TanStack Query)

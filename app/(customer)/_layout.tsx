@@ -20,11 +20,15 @@ import { COLORS } from '@/constants';
  * AI Hint: Add customer-specific tabs here only. EcoService tabs live in
  * app/(ecoservice)/_layout.tsx. Never cross-import between groups.
  */
+
+// DEV ONLY: bypass auth to preview customer UI without logging in
+const ENABLE_HOME_PREVIEW = true;
+
 export default function CustomerLayout() {
   const { isAuthenticated, user } = useAuthStore();
 
   // Auth guard — redirect if not logged in or wrong role
-  if (!isAuthenticated || user?.role !== 'customer') {
+  if (!ENABLE_HOME_PREVIEW && (!isAuthenticated || user?.role !== 'customer')) {
     return <Redirect href="/(auth)/login" />;
   }
 
