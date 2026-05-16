@@ -28,6 +28,10 @@ google-services.json
 .env.local
 .env.development
 .env.production
+backend/.env
+
+# Backend
+backend/node_modules/
 
 # TypeScript
 *.tsbuildinfo

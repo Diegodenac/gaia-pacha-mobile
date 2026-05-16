@@ -47,12 +47,14 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false }}>
-          {/* Auth group — unauthenticated routes */}
-          <Stack.Screen name="(auth)" />
+          {/* Root index — handles auth/role redirect logic */}
+          <Stack.Screen name="index" />
           {/* Customer tab group */}
           <Stack.Screen name="(customer)" />
           {/* EcoService tab group */}
           <Stack.Screen name="(ecoservice)" />
+          {/* Auth group — unauthenticated routes */}
+          <Stack.Screen name="(auth)" />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>
