@@ -1,5 +1,4 @@
-import { Tabs, Redirect } from 'expo-router';
-import { useAuthStore } from '@/store/authStore';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants';
 
@@ -7,26 +6,30 @@ import { COLORS } from '@/constants';
  * Customer Tab Group Layout
  *
  * Tabs:
- *  - index    → Home / Featured Services
+ *  - index    → Home / Explorer Feed  ← Entry point in demo mode
  *  - catalog  → Browse & Search EcoServices
  *  - map      → Nearby Services Map
  *  - orders   → My Orders & History
  *  - profile  → Customer Profile & Settings
  *
+ * DEMO MODE (feature-explorer branch):
+ *  Auth guard is disabled — unauthenticated users can access all Customer tabs.
+ *  To re-enable, uncomment the guard block inside CustomerLayout().
+ *
  * Performance notes:
  *  - `lazy={true}` defers rendering non-active tabs until first visit
- *  - Tab state is preserved on switch (no full unmount) via Expo Router default behaviour
+ *  - Tab state is preserved on switch via Expo Router default behaviour
  *
  * AI Hint: Add customer-specific tabs here only. EcoService tabs live in
  * app/(ecoservice)/_layout.tsx. Never cross-import between groups.
  */
 export default function CustomerLayout() {
-  const { isAuthenticated, user } = useAuthStore();
-
-  // Auth guard — redirect if not logged in or wrong role
-  if (!isAuthenticated || user?.role !== 'customer') {
-    return <Redirect href="/(auth)/login" />;
-  }
+  // Auth guard DISABLED for demo mode.
+  // To re-enable, replace this block with:
+  //   const { isAuthenticated, user } = useAuthStore();
+  //   if (!isAuthenticated || user?.role !== 'customer') {
+  //     return <Redirect href="/(auth)/login" />;
+  //   }
 
   return (
     <Tabs

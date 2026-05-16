@@ -126,12 +126,68 @@ export type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ColorScheme = 'light' | 'dark';
 
+// ─── Explorer / Mixed Feed Types ─────────────────────────────────────────────
+/**
+ * ExplorerItemType — discriminates between a normalised Product and EcoService
+ * in the unified Explorer feed.
+ *
+ * MVP Note: The repository maps both catalog entities into this shape.
+ * When the real /explorer/feed endpoint is ready, only the repository body
+ * changes — all UI types and components remain untouched.
+ */
+export type ExplorerItemType = 'product' | 'ecoservice';
+
+/** Active filter key for the Explorer filter pill bar */
+export type ExplorerFilter =
+  | 'all'
+  | 'near_me'
+  | 'products'
+  | 'ecoservices'
+  | 'carbon'
+  | 'price';
+
+/**
+ * ExplorerItem — normalised, presentation-ready shape for the staggered feed.
+ * Both Product and EcoService are mapped into this by the explorer repository.
+ */
+export interface ExplorerItem {
+  id:           string;
+  type:         ExplorerItemType;
+  title:        string;
+  imageUrl:     string;
+  location?:    string;
+  /** e.g. "CO2 -25%" — derived from sustainabilityScore for MVP */
+  co2Reduction?: string;
+  /** Formatted price string, present only for 'product' items */
+  priceLabel?:  string;
+  ecoCategory:  EcoCategory;
+  isVerified:   boolean;
+  /** Original entity references — used for detail navigation */
+  rawProduct?:     Product;
+  rawEcoService?:  EcoService;
+}
+
+/**
+ * ExplorerFilters — query params passed from the screen down to the repository.
+ * Client-side filtering is applied for the MVP; the shape is API-compatible
+ * for future server-side filtering.
+ */
+export interface ExplorerFilters {
+  search?:       string;
+  type?:         ExplorerItemType | 'all';
+  region?:       string;
+  carbonFocus?:  boolean;
+  priceSort?:    boolean;
+  page?:         number;
+  perPage?:      number;
+}
+
 // ─── Navigation Param Types (Expo Router typed routes) ────────────────────────
 export type RootParamList = {
   '/(auth)/login': undefined;
   '/(auth)/register': undefined;
   '/(auth)/forgot-password': undefined;
-  '/(customer)': undefined;
+  '/(customer)': undefined;           // Explorer Tab (Home)
   '/(customer)/catalog': undefined;
   '/(customer)/map': undefined;
   '/(customer)/orders': undefined;

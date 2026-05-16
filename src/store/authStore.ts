@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { AuthUser, AuthState } from '@/types';
 import { STORAGE_KEYS } from '@/constants';
 import { authRepository } from '@/repositories/auth.repository';
+import { registerTokenGetter, registerLogoutHandler } from '@/lib/apiClient';
 
 // ─── SecureStore Adapter for Zustand Persist ─────────────────────────────────
 const secureStorage = {
@@ -70,3 +71,11 @@ export const useAuthStore = create<AuthStore>()(
     },
   ),
 );
+
+// ─── Wire lazy references into apiClient (breaks the require cycle) ───────────
+// apiClient cannot import authStore directly (would create a circular dep).
+// We register the getters here, after the store is fully created.
+// The direction is: authStore → apiClient (one-way only).
+registerTokenGetter(() => useAuthStore.getState().token);
+registerLogoutHandler(() => useAuthStore.getState().logout());
+

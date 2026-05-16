@@ -1,27 +1,24 @@
 import { Redirect } from 'expo-router';
-import { useAuthStore } from '@/store/authStore';
 
 /**
- * App root index — acts as the auth/role guard.
+ * App root index — entry point redirect.
  *
- * Routing logic:
- *  - Not authenticated → redirect to /(auth)/login
- *  - Role 'customer'   → redirect to /(customer)
- *  - Role 'ecoservice' → redirect to /(ecoservice)
+ * DEMO MODE (feature-explorer branch):
+ *  All users land directly on the Explorer Tab (Customer Home) without login.
+ *  Auth/role guard is disabled for hackathon demo purposes.
+ *
+ * To restore auth-gated routing, uncomment the block below and remove
+ * the unconditional redirect:
+ *
+ *   import { useAuthStore } from '@/store/authStore';
+ *   const { isAuthenticated, user } = useAuthStore();
+ *   if (!isAuthenticated || !user) return <Redirect href="/(auth)/login" />;
+ *   if (user.role === 'ecoservice') return <Redirect href="/(ecoservice)" />;
+ *   return <Redirect href="/(customer)" />;
  *
  * AI Hint: This file ONLY redirects. Keep zero business logic here.
- * The actual tab layouts are in their respective group _layout.tsx files.
  */
 export default function Index() {
-  const { isAuthenticated, user } = useAuthStore();
-
-  if (!isAuthenticated || !user) {
-    return <Redirect href="/(auth)/login" />;
-  }
-
-  if (user.role === 'ecoservice') {
-    return <Redirect href="/(ecoservice)" />;
-  }
-
+  // 🚀 Demo mode: skip login, go straight to the Explorer Tab
   return <Redirect href="/(customer)" />;
 }

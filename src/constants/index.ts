@@ -37,6 +37,10 @@ export const QUERY_KEYS = {
   myInventory:  (serviceId: string) => ['inventory', serviceId]        as const,
   serviceOrders:(serviceId: string) => ['orders', 'service', serviceId] as const,
   salesMetrics: (serviceId: string) => ['metrics', serviceId]          as const,
+
+  // Explorer Feed (Customer Home Tab)
+  explorerFeed: (filters?: Record<string, unknown>) =>
+    ['explorer', 'feed', filters] as const,
 } as const;
 
 // ─── Cache Time Policies (milliseconds) ──────────────────────────────────────
@@ -67,4 +71,16 @@ export const COLORS = {
   error:     '#ef4444',
   warning:   '#f59e0b',
   success:   '#22c55e',
+
+  // ─── Explorer Tab Design Tokens (per feature spec) ────────────────────────
+  /** Explorer screen background — distinct from main surface */
+  explorerBg:      '#191616',
+  /** Explorer card surface — slightly lighter than bg for elevation */
+  explorerSurface: '#333333',
+  /** Mid-green for EcoService badges and CO2 labels */
+  greenMid:        '#74A643',
+  /** Dark green for CO2 badge background */
+  greenDark:       '#3A5B13',
+  /** Medium-emphasis text on Explorer cards */
+  textMedium:      '#9E9E9E',
 } as const;
