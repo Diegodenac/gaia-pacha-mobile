@@ -16,7 +16,7 @@
       },
       "env": {
         "APP_ENV": "development",
-        "API_URL": "[YOUR_DEV_API_URL]"
+        "EXPO_PUBLIC_API_URL": "http://localhost:3000/api"
       }
     },
     "preview": {
@@ -26,7 +26,7 @@
       },
       "env": {
         "APP_ENV": "preview",
-        "API_URL": "[YOUR_PREVIEW_API_URL]"
+        "EXPO_PUBLIC_API_URL": "https://api-preview.gaia-pacha.com/api"
       }
     },
     "production": {
@@ -36,7 +36,7 @@
       },
       "env": {
         "APP_ENV": "production",
-        "API_URL": "[YOUR_PRODUCTION_API_URL]"
+        "EXPO_PUBLIC_API_URL": "https://api.gaia-pacha.com/api"
       }
     }
   },
