@@ -459,14 +459,27 @@ pool.query(`
 `).then(() => console.log('✅ Tabla usuarios lista'))
   .catch((err) => console.error('❌ Error creando tabla usuarios:', err.message));
 
+// Log actual column names of usuarios table for debugging
+pool.query(`
+  SELECT column_name, data_type, column_default
+  FROM information_schema.columns
+  WHERE table_name = 'usuarios'
+  ORDER BY ordinal_position
+`).then((r) => console.log('📋 Columnas de usuarios:', r.rows.map(c => c.column_name).join(', ')))
+  .catch(() => {});
+
 // ── Auth — Helpers ────────────────────────────────────────────────────────────
 
 function makeUserPayload(row) {
+  // Handle variations in the actual DB column names
+  const id = row.id_usuarios ?? row.id_usuario ?? row.id ?? '';
+  const role = row.tipo_usuario ?? row.role ?? row.rol ?? 'customer';
+  const createdAt = row.fecha_registro ?? row.created_at ?? row.createdAt ?? null;
   return {
-    id:        String(row.id_usuarios),
+    id:        String(id),
     email:     row.email,
-    role:      row.tipo_usuario,
-    createdAt: row.fecha_registro,
+    role,
+    createdAt,
   };
 }
 
@@ -495,7 +508,7 @@ app.post('/auth/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Tipo de usuario inválido' });
     }
     const normalizedEmail = email.trim().toLowerCase();
-    const existing = await pool.query('SELECT id_usuarios FROM usuarios WHERE email = $1', [normalizedEmail]);
+    const existing = await pool.query('SELECT * FROM usuarios WHERE email = $1', [normalizedEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ success: false, error: 'El email ya está registrado' });
     }
@@ -504,8 +517,9 @@ app.post('/auth/register', async (req, res) => {
       [normalizedEmail, password, role],
     );
     const user = result.rows[0];
-    const token = jwt.sign({ id: user.id_usuarios, email: user.email, role: user.tipo_usuario }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    console.log(`[POST /auth/register] id=${user.id_usuarios} tipo=${user.tipo_usuario}`);
+    const payload = makeUserPayload(user);
+    const token = jwt.sign({ id: payload.id, email: payload.email, role: payload.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    console.log(`[POST /auth/register] id=${payload.id} tipo=${payload.role}`);
     res.status(201).json({ success: true, data: { user: makeUserPayload(user), token } });
   } catch (err) {
     console.error('[POST /auth/register]', err.message);
@@ -527,9 +541,10 @@ app.post('/auth/login', async (req, res) => {
     if (password !== user.password_hash) {
       return res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
     }
-    const token = jwt.sign({ id: user.id_usuarios, email: user.email, role: user.tipo_usuario }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    console.log(`[POST /auth/login] id=${user.id_usuarios}`);
-    res.json({ success: true, data: { user: makeUserPayload(user), token } });
+    const loginPayload = makeUserPayload(user);
+    const token = jwt.sign({ id: loginPayload.id, email: loginPayload.email, role: loginPayload.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    console.log(`[POST /auth/login] id=${loginPayload.id}`);
+    res.json({ success: true, data: { user: loginPayload, token } });
   } catch (err) {
     console.error('[POST /auth/login]', err.message);
     res.status(500).json({ success: false, error: err.message });
@@ -540,7 +555,7 @@ app.post('/auth/logout', (_req, res) => res.json({ success: true }));
 
 app.get('/auth/me', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM usuarios WHERE id_usuarios = $1', [req.user.id]);
+    const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [req.user.email]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
     }
