@@ -9,10 +9,10 @@ export const APP_VERSION = '1.0.0';
 
 // ─── Async Storage Keys ───────────────────────────────────────────────────────
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: '@gaia_pacha/auth_token',
-  USER_PROFILE: '@gaia_pacha/user_profile',
-  USER_ROLE: '@gaia_pacha/user_role',
-  ONBOARDED: '@gaia_pacha/onboarded',
+  AUTH_TOKEN: 'gaia_pacha_auth_token',
+  USER_PROFILE: 'gaia_pacha_user_profile',
+  USER_ROLE: 'gaia_pacha_user_role',
+  ONBOARDED: 'gaia_pacha_onboarded',
 } as const;
 
 // ─── TanStack Query Keys ──────────────────────────────────────────────────────
