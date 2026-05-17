@@ -126,6 +126,25 @@ export type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ColorScheme = 'light' | 'dark';
 
+// ─── Enterprise Creation ──────────────────────────────────────────────────────
+export interface CreateEnterprisePayload {
+  nombre_emprendimiento:           string;
+  nombre_entrepreneur:             string;
+  edad_emprendedor:                string;
+  celular_ventas:                  string;
+  descripcion_detallada:           string;
+  horario_atencion:                string;
+  tipo_ubicacion:                  string;
+  link_google_maps:                string;
+  redes_sociales:                  string;
+  tiempo_mercado:                  string;
+  actividades_sostenibles:         string;
+  reduce_empaques:                 string;
+  resuelve_problematica_ambiental: string;
+  foto_principal_url:              string;
+  catalogo_pdf_url:                string;
+}
+
 // ─── Navigation Param Types (Expo Router typed routes) ────────────────────────
 export type RootParamList = {
   '/(auth)/login': undefined;

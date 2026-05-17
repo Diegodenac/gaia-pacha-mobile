@@ -341,6 +341,16 @@ export default function CustomerProfileScreen() {
             />
           </View>
 
+          {/* Registrar EcoService */}
+          <TouchableOpacity style={p.ecoBtn} onPress={() => router.push('/ecoservice-registration')}>
+            <Ionicons name="leaf-outline" size={16} color={PRIMARY} />
+            <View style={p.ecoBtnTextWrap}>
+              <Text style={p.ecoBtnTitle}>Registra tu EcoService</Text>
+              <Text style={p.ecoBtnSub}>Suma tu emprendimiento al mapa verde</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={PRIMARY} />
+          </TouchableOpacity>
+
           {/* Cerrar sesión */}
           <TouchableOpacity style={p.logoutBtn} onPress={logout}>
             <Ionicons name="log-out-outline" size={18} color="#ef4444" />
@@ -405,11 +415,11 @@ export default function CustomerProfileScreen() {
 
 // ── Estilos ───────────────────────────────────────────────────────────────────
 
+const PRIMARY        = '#22c55e';
 const SURFACE        = '#0d1117';
 const SURFACE_RAISED = '#161b22';
 const SURFACE_INPUT  = '#21262d';
 const BORDER         = '#30363d';
-const PRIMARY        = '#22c55e';
 const PRIMARY_LIGHT  = '#4ade80';
 const TEXT_WHITE     = '#ffffff';
 const TEXT_SECONDARY = '#9ca3af';
@@ -457,6 +467,11 @@ const p = StyleSheet.create({
   rowCard:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: SURFACE_RAISED, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10, borderWidth: 1, borderColor: BORDER },
   rowLabel:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowLabelText:  { fontSize: 14, color: TEXT_SECONDARY },
+
+  ecoBtn:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(34,197,94,0.08)', borderWidth: 1.5, borderColor: 'rgba(34,197,94,0.3)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10 },
+  ecoBtnTextWrap:{ flex: 1 },
+  ecoBtnTitle:   { fontSize: 14, fontWeight: '700', color: PRIMARY },
+  ecoBtnSub:     { fontSize: 12, color: '#6b7280', marginTop: 1 },
 
   logoutBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: BORDER, borderRadius: 14, paddingVertical: 14, marginTop: 4 },
   logoutText:    { fontSize: 15, fontWeight: '600', color: RED },

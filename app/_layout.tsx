@@ -57,6 +57,8 @@ export default function RootLayout() {
           <Stack.Screen name="(ecoservice)" />
           {/* Auth group — unauthenticated routes */}
           <Stack.Screen name="(auth)" />
+          {/* EcoService registration wizard — full-screen modal */}
+          <Stack.Screen name="ecoservice-registration" options={{ animation: 'slide_from_bottom' }} />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>

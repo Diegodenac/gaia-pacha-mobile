@@ -445,6 +445,106 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
   }
 });
 
+// POST /api/enterprises — register a new EcoService (authenticated customers only)
+app.post('/api/enterprises', authMiddleware, async (req, res) => {
+  try {
+    const {
+      nombre_emprendimiento,
+      nombre_entrepreneur,
+      edad_emprendedor,
+      celular_ventas,
+      descripcion_detallada,
+      horario_atencion,
+      tipo_ubicacion,
+      link_google_maps,
+      redes_sociales,
+      tiempo_mercado,
+      actividades_sostenibles,
+      reduce_empaques,
+      resuelve_problematica_ambiental,
+      foto_principal_url,
+      catalogo_pdf_url,
+    } = req.body;
+
+    // Validate required fields
+    const missing = [];
+    if (!nombre_emprendimiento?.trim()) missing.push('nombre_emprendimiento');
+    if (!nombre_entrepreneur?.trim())   missing.push('nombre_entrepreneur');
+    if (!celular_ventas?.trim())         missing.push('celular_ventas');
+    if (!descripcion_detallada?.trim()) missing.push('descripcion_detallada');
+    if (!tipo_ubicacion?.trim())        missing.push('tipo_ubicacion');
+    if (!reduce_empaques?.trim())       missing.push('reduce_empaques');
+    if (!foto_principal_url?.trim())    missing.push('foto_principal_url');
+
+    if (missing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Faltan campos requeridos: ${missing.join(', ')}`,
+      });
+    }
+
+    const sql = `
+      INSERT INTO ecoservices (
+        nombre_emprendimiento,
+        nombre_entrepreneur,
+        edad_emprendedor,
+        celular_ventas,
+        descripcion_detallada,
+        horario_atencion,
+        tipo_ubicacion,
+        link_google_maps,
+        redes_sociales,
+        tiempo_mercado,
+        actividades_sostenibles,
+        reduce_empaques,
+        resuelve_problematica_ambiental,
+        foto_principal_url,
+        catalogo_pdf_url,
+        estado_validacion,
+        id_usuario
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, 'pendiente', $16
+      )
+      RETURNING *
+    `;
+
+    const params = [
+      nombre_emprendimiento.trim(),
+      nombre_entrepreneur.trim(),
+      edad_emprendedor   ?? '',
+      celular_ventas.trim(),
+      descripcion_detallada.trim(),
+      horario_atencion   ?? '',
+      tipo_ubicacion.trim(),
+      link_google_maps   ?? '',
+      redes_sociales     ?? '',
+      tiempo_mercado     ?? '',
+      actividades_sostenibles        ?? '',
+      reduce_empaques.trim(),
+      resuelve_problematica_ambiental ?? '',
+      foto_principal_url.trim(),
+      catalogo_pdf_url   ?? '',
+      req.user.id,
+    ];
+
+    const result = await pool.query(sql, params);
+    const created = result.rows[0];
+
+    // Elevate user role so the next login returns role:'ecoservice'
+    await pool.query(
+      `UPDATE usuarios SET tipo_usuario = 'ecoservice' WHERE id_usuarios = $1`,
+      [req.user.id],
+    );
+
+    console.log(`[POST /api/enterprises] id=${created.id_ecoservice} user=${req.user.id}`);
+    res.status(201).json({ success: true, data: mapEnterprise(created) });
+  } catch (err) {
+    console.error('[POST /api/enterprises] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── Auth — DB Init ────────────────────────────────────────────────────────────
 
 pool.query(`

@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { apiClient } from '@/lib/apiClient';
 import { GREEN_ENTERPRISES } from '@/features/customer/home/mockData';
 import type { GreenEnterprise } from '@/features/customer/home/mockData';
-import type { EcoCategory } from '@/types';
+import type { EcoCategory, CreateEnterprisePayload } from '@/types';
 
 // ── Backend URL ───────────────────────────────────────────────────────────────
 const BACKEND_URL = 'https://gaia-pacha-backend.onrender.com';
@@ -59,6 +60,16 @@ export interface PaginatedEnterprises {
 }
 
 export const enterprisesRepository = {
+  /**
+   * Creates a new enterprise (EcoService registration).
+   * Requires authenticated user via apiClient bearer token.
+   */
+  create: async (payload: CreateEnterprisePayload) => {
+    const response = await apiClient.post('/api/enterprises', payload);
+    return response.data;
+  },
+
+
   /**
    * Fetches paginated enterprises from the backend.
    * Enriches missing visual fields from mock data so cards always look complete.
