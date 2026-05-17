@@ -8,6 +8,7 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
+const axios = require('axios'); // <-- AÑADIDO: Para conectar con tu Motor de Recomendaciones
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gaia-pacha-dev-secret-change-in-prod';
 const JWT_EXPIRES_IN = '30d';
@@ -35,10 +36,6 @@ pool.connect((err, client, release) => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/**
- * Converts any Google Drive share/view URL to a direct thumbnail URL.
- * Handles: open?id=, file/d/, uc?id= formats.
- */
 function convertDriveUrl(url) {
   if (!url || !url.includes('drive.google.com')) return url;
 
@@ -53,9 +50,6 @@ function convertDriveUrl(url) {
   return url;
 }
 
-/**
- * Uploads a file buffer to Google Drive using a Service Account.
- */
 async function uploadToDrive(fileBuffer, fileName, mimeType) {
   const credentialsPath = path.join(__dirname, 'google-credentials.json');
   if (!fs.existsSync(credentialsPath)) {
@@ -92,7 +86,6 @@ async function uploadToDrive(fileBuffer, fileName, mimeType) {
       fields: 'id, webViewLink'
     });
 
-    // Make public
     await drive.permissions.create({
       fileId: file.data.id,
       requestBody: { role: 'reader', type: 'anyone' }
@@ -105,10 +98,6 @@ async function uploadToDrive(fileBuffer, fileName, mimeType) {
   }
 }
 
-/**
- * Maps a nombre_categoria from the DB to one of the EcoCategory values
- * used by the frontend (organic_food | sustainable_fashion | recycling | renewable_energy | other).
- */
 function mapCategory(nombre) {
   if (!nombre) return 'other';
   const n = nombre.toLowerCase();
@@ -119,10 +108,6 @@ function mapCategory(nombre) {
   return 'other';
 }
 
-/**
- * Extracts a human-readable location string from the raw DB value.
- * tipo_ubicacion values are verbose dropdown options, so we clean them up.
- */
 function parseLocation(tipoUbicacion, linkMaps) {
   if (tipoUbicacion) {
     const lower = tipoUbicacion.toLowerCase();
@@ -132,15 +117,11 @@ function parseLocation(tipoUbicacion, linkMaps) {
     if (lower.includes('mi casa')) return 'Entrega a Domicilio · Bolivia';
   }
   if (linkMaps && !linkMaps.startsWith('http')) {
-    // It's a text description, not an actual link — use first 35 chars
     return linkMaps.substring(0, 35).trim();
   }
   return 'Bolivia';
 }
 
-/**
- * Infers an impactSummary from the available sustainability fields.
- */
 function buildImpactSummary(row) {
   if (row.resuelve_problematica_ambiental) return row.resuelve_problematica_ambiental;
   if (row.actividades_sostenibles) return row.actividades_sostenibles;
@@ -148,10 +129,6 @@ function buildImpactSummary(row) {
   return '';
 }
 
-/**
- * Builds greenSignals from available DB fields.
- * Returns array of { label, value } objects.
- */
 function buildGreenSignals(row) {
   const signals = [];
   if (row.tiempo_mercado) {
@@ -168,9 +145,6 @@ function buildGreenSignals(row) {
   return signals;
 }
 
-/**
- * Builds impact badges from validaciones_indicadores and validation status.
- */
 function buildImpactBadges(row) {
   const badges = [];
   if (['validado', 'activo'].includes((row.estado_validacion ?? '').toLowerCase())) {
@@ -186,9 +160,6 @@ function buildImpactBadges(row) {
   return badges;
 }
 
-/**
- * Maps a raw ecoservices row + joined category row → GreenEnterprise shape.
- */
 function mapEnterprise(row) {
   return {
     id: String(row.id_ecoservice ?? ''),
@@ -197,7 +168,7 @@ function mapEnterprise(row) {
     category: mapCategory(row.nombre_categoria),
     categoryLabel: row.nombre_categoria ?? 'Eco Emprendimiento',
     imageUrl: convertDriveUrl(row.foto_principal_url ?? ''),
-    logoUrl: '',  // no logo column in DB — frontend will use mock fallback
+    logoUrl: '',
     location: parseLocation(row.tipo_ubicacion, row.link_google_maps),
     impactSummary: buildImpactSummary(row),
     greenSignals: buildGreenSignals(row),
@@ -212,7 +183,6 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'gaia-pacha-backend' });
 });
 
-// GET /api/enterprises — list with optional ?category=&search=&page=&limit= filters
 app.get('/api/enterprises', async (req, res) => {
   try {
     const { search, category, categoryId } = req.query;
@@ -229,7 +199,6 @@ app.get('/api/enterprises', async (req, res) => {
       clauses.push(`(LOWER(e.nombre_emprendimiento) LIKE $${n} OR LOWER(e.descripcion_detallada) LIKE $${n})`);
     }
 
-    // Filter by exact DB category id (preferred when chips come from /api/categories)
     if (categoryId) {
       params.push(parseInt(categoryId));
       clauses.push(`sc_link.id_categoria = $${params.length}`);
@@ -261,13 +230,11 @@ app.get('/api/enterprises', async (req, res) => {
       LEFT JOIN categorias c ON c.id_categoria = sc_link.id_categoria
     `;
 
-    // 1. Get total count for pagination metadata
     const countSql = `SELECT COUNT(*) FROM ecoservices e ${joins} ${where}`;
     const countResult = await pool.query(countSql, params);
     const totalCount = parseInt(countResult.rows[0].count);
     const totalPages = Math.ceil(totalCount / limit);
 
-    // 2. Add LIMIT and OFFSET params
     params.push(limit, offset);
     const limitIdx = params.length - 1;
     const offsetIdx = params.length;
@@ -328,7 +295,6 @@ app.get('/api/enterprises', async (req, res) => {
   }
 });
 
-// GET /api/enterprises/me — returns the ecoservice owned by the authenticated user
 app.get('/api/enterprises/me', authMiddleware, async (req, res) => {
   try {
     const sql = `
@@ -355,7 +321,6 @@ app.get('/api/enterprises/me', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/enterprises/:id
 app.get('/api/enterprises/:id', async (req, res) => {
   try {
     const sql = `
@@ -381,7 +346,6 @@ app.get('/api/enterprises/:id', async (req, res) => {
   }
 });
 
-// GET /api/categories
 app.get('/api/categories', async (req, res) => {
   try {
     const sql = `SELECT * FROM categorias ORDER BY nombre_categoria ASC`;
@@ -393,10 +357,62 @@ app.get('/api/categories', async (req, res) => {
   }
 });
 
-// GET /api/products — list products (with optional filtering by ?ecoservice_id=)
+// =========================================================================
+// RUTA DE PRODUCTOS MÁGICA: CONECTADA AL MOTOR DE RECOMENDACIONES
+// =========================================================================
 app.get('/api/products', async (req, res) => {
   try {
-    const { ecoservice_id } = req.query;
+    const { ecoservice_id, id_customer } = req.query;
+
+    // 1. Buscamos el ID del cliente de forma dinámica
+    let customerId = id_customer;
+
+    // Si el frontend no mandó el id por la URL, lo descubrimos abriendo el Token de autenticación
+    const header = req.headers.authorization ?? '';
+    if (!customerId && header.startsWith('Bearer ')) {
+      try {
+        const decoded = jwt.verify(header.slice(7), JWT_SECRET);
+        customerId = decoded.id; // <-- ¡Aquí atrapa el ID del usuario que inició sesión!
+      } catch (tokenErr) {
+        console.log('[GET /api/products] Token enviado no es válido, se procesará como invitado');
+      }
+    }
+
+    // CASO A: MAGIA DEL MOTOR (Si hay un usuario identificado, ya sea por URL o por Token)
+    if (customerId) {
+      try {
+        console.log(`[GET /api/products] Generando feed personalizado para id_customer: ${customerId}`);
+        const response = await axios.get(`https://motor-recomendaciones-api.onrender.com/api/recomendaciones/productos/${customerId}`);
+        const { productos_ids } = response.data;
+
+        if (productos_ids && productos_ids.length > 0) {
+          const placeholders = productos_ids.map((_, i) => `$${i + 1}`).join(',');
+          const sqlPersonalizado = `
+            SELECT p.*, e.nombre_emprendimiento, c.nombre_categoria
+            FROM productos p
+            LEFT JOIN ecoservices e ON p.id_ecoservice = e.id_ecoservice
+            LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+            WHERE p.id_producto IN (${placeholders})
+          `;
+          const resultDb = await pool.query(sqlPersonalizado, productos_ids);
+
+          const productosOrdenados = productos_ids
+            .map(id => resultDb.rows.find(row => parseInt(row.id_producto) === id))
+            .filter(Boolean);
+
+          return res.json({ 
+            success: true, 
+            data: productosOrdenados, 
+            count: productosOrdenados.length,
+            source: `motor-recomendaciones-para-usuario-${customerId}`
+          });
+        }
+      } catch (motorError) {
+        console.error('❌ Error con Motor Recomendaciones:', motorError.message);
+      }
+    }
+
+    // CASO B: FLUJO TRADICIONAL (Para usuarios no logueados / invitados)
     let sql = `
       SELECT p.*, e.nombre_emprendimiento, c.nombre_categoria
       FROM productos p
@@ -413,14 +429,13 @@ app.get('/api/products', async (req, res) => {
     sql += ` ORDER BY p.id_producto DESC`;
 
     const result = await pool.query(sql, params);
-    res.json({ success: true, data: result.rows, count: result.rows.length });
+    res.json({ success: true, data: result.rows, count: result.rows.length, source: 'tradicional-invitado' });
   } catch (err) {
     console.error('[GET /api/products] Error:', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// GET /api/products/:id — get a single product by id
 app.get('/api/products/:id', async (req, res) => {
   try {
     const sql = `
@@ -443,7 +458,6 @@ app.get('/api/products/:id', async (req, res) => {
   }
 });
 
-// POST /api/products — create a new product (handles image upload)
 app.post('/api/products', upload.single('image'), async (req, res) => {
   try {
     const { name, description, price, categoryId, ecoServiceId } = req.body;
@@ -476,7 +490,6 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
   }
 });
 
-// POST /api/enterprises — register a new EcoService (authenticated customers only)
 app.post('/api/enterprises', authMiddleware, async (req, res) => {
   try {
     const {
@@ -497,7 +510,6 @@ app.post('/api/enterprises', authMiddleware, async (req, res) => {
       catalogo_pdf_url,
     } = req.body;
 
-    // Validate required fields
     const missing = [];
     if (!nombre_emprendimiento?.trim()) missing.push('nombre_emprendimiento');
     if (!nombre_entrepreneur?.trim())   missing.push('nombre_entrepreneur');
@@ -566,7 +578,6 @@ app.post('/api/enterprises', authMiddleware, async (req, res) => {
       const result = await client.query(sql, params);
       created = result.rows[0];
 
-      // Elevate user role so the next login returns role:'ecoservice'
       await client.query(
         `UPDATE usuarios SET tipo_usuario = 'ecoservice' WHERE email = $1`,
         [req.user.email],
@@ -601,7 +612,6 @@ pool.query(`
 `).then(() => console.log('✅ Tabla usuarios lista'))
   .catch((err) => console.error('❌ Error creando tabla usuarios:', err.message));
 
-// Log actual column names of usuarios table for debugging
 pool.query(`
   SELECT column_name, data_type, column_default
   FROM information_schema.columns
@@ -613,7 +623,6 @@ pool.query(`
 // ── Auth — Helpers ────────────────────────────────────────────────────────────
 
 function makeUserPayload(row) {
-  // Handle variations in the actual DB column names
   const id = row.id_usuarios ?? row.id_usuario ?? row.id ?? '';
   const role = row.tipo_usuario ?? row.role ?? row.rol ?? 'customer';
   const createdAt = row.fecha_registro ?? row.created_at ?? row.createdAt ?? null;
@@ -720,4 +729,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Gaia Pacha Backend running on http://localhost:${PORT}`);
 });
-
