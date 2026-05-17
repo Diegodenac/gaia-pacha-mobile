@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import type { GreenEnterprise } from '@/features/customer/home/mockData';
 
 interface Props {
@@ -23,11 +24,16 @@ export function ImpactServiceCard({ enterprise, onPress }: Props) {
   const [pressed, setPressed] = useState(false);
   const cat = CATEGORY_STYLES[enterprise.category] ?? CATEGORY_STYLES['other'];
 
+  const handlePress = () => {
+    onPress?.();
+    router.push(`/enterprise/${enterprise.id}`);
+  };
+
   return (
     <Pressable
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
-      onPress={onPress}
+      onPress={handlePress}
       style={[s.card, pressed && s.cardPressed]}
     >
       {/* ── IMAGE HERO ───────────────────────────────── */}
@@ -107,7 +113,7 @@ export function ImpactServiceCard({ enterprise, onPress }: Props) {
         </View>
 
         {/* ── CTA ────────────────────────────────────── */}
-        <Pressable style={s.cta} onPress={onPress}>
+        <Pressable style={s.cta} onPress={handlePress}>
           <Text style={s.ctaText}>Conocer empresa</Text>
           <Ionicons name="arrow-forward" size={15} color="#fff" />
         </Pressable>

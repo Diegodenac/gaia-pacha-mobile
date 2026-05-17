@@ -18,7 +18,69 @@ export interface GreenEnterprise {
   greenSignals: GreenSignal[];
   impactBadges: string[];
   keywords: string[];
+  // Detail fields — populated from full DB row
+  phone?: string;
+  socialNetworksRaw?: string;
+  schedule?: string;
+  linkGoogleMaps?: string;
+  isVirtual?: boolean;
+  ecoActivities?: string;
+  environmentalProblem?: string;
+  entrepreneurName?: string;
 }
+
+// ── Mock product catalog (displayed in detail screen until real products load) ──
+export interface MockProduct {
+  id: string;
+  name: string;
+  price: string;
+  imageUrl: string;
+  description: string;
+  badge?: string;
+}
+
+export const MOCK_PRODUCTS: MockProduct[] = [
+  {
+    id: 'mp-1',
+    name: 'Pack Eco Básico',
+    price: 'Bs. 45',
+    badge: 'Destacado',
+    imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80',
+    description: 'Kit de inicio sostenible',
+  },
+  {
+    id: 'mp-2',
+    name: 'Cesta Orgánica',
+    price: 'Bs. 80',
+    badge: 'Popular',
+    imageUrl: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&q=80',
+    description: 'Productos de temporada',
+  },
+  {
+    id: 'mp-3',
+    name: 'Kit Reciclaje',
+    price: 'Bs. 35',
+    badge: 'Nuevo',
+    imageUrl: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80',
+    description: 'Empaques reutilizables',
+  },
+  {
+    id: 'mp-4',
+    name: 'Cosméticos Nat.',
+    price: 'Bs. 120',
+    badge: 'Premium',
+    imageUrl: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&q=80',
+    description: 'Sin químicos artificiales',
+  },
+  {
+    id: 'mp-5',
+    name: 'Artesanía Local',
+    price: 'Bs. 60',
+    badge: 'Artesanal',
+    imageUrl: 'https://images.unsplash.com/photo-1604881988758-f76ad2f7aac1?w=400&q=80',
+    description: 'Hecho con amor',
+  },
+];
 
 export const HOME_CATEGORIES: Array<{ id: 'all' | EcoCategory; label: string }> = [
   { id: 'all',                label: 'Todas' },

@@ -127,6 +127,10 @@ function buildImpactBadges(row) {
  * Maps a raw ecoservices row + joined category row → GreenEnterprise shape.
  */
 function mapEnterprise(row) {
+  const isVirtual =
+    (row.link_google_maps ?? '').toLowerCase().includes('virtual') ||
+    (row.tipo_ubicacion  ?? '').toLowerCase().includes('virtual');
+
   return {
     id:            String(row.id_ecoservice ?? ''),
     name:          (row.nombre_emprendimiento ?? '').trim(),
@@ -134,12 +138,21 @@ function mapEnterprise(row) {
     category:      mapCategory(row.nombre_categoria),
     categoryLabel: row.nombre_categoria ?? 'Eco Emprendimiento',
     imageUrl:      convertDriveUrl(row.foto_principal_url ?? ''),
-    logoUrl:       '',  // no logo column in DB — frontend will use mock fallback
+    logoUrl:       '',
     location:      parseLocation(row.tipo_ubicacion, row.link_google_maps),
     impactSummary: buildImpactSummary(row),
     greenSignals:  buildGreenSignals(row),
     impactBadges:  buildImpactBadges(row),
     keywords:      [],
+    // ── Detail fields ────────────────────────────────────────────────────────
+    phone:                (row.celular_ventas ?? '').trim(),
+    socialNetworksRaw:    row.redes_sociales ?? '',
+    schedule:             (row.horario_atencion ?? '').trim(),
+    linkGoogleMaps:       row.link_google_maps ?? '',
+    isVirtual,
+    ecoActivities:        row.actividades_sostenibles ?? '',
+    environmentalProblem: row.resuelve_problematica_ambiental ?? '',
+    entrepreneurName:     (row.nombre_entrepreneur ?? '').trim(),
   };
 }
 
