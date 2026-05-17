@@ -69,6 +69,30 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
     }
   };
 
+  const obtenerLinkDirecto = (urlOriginal: string) => {
+    if (!urlOriginal || !urlOriginal.includes('drive.google.com')) return urlOriginal;
+
+    try {
+      // Estrategia 1: Formato con /d/
+      if (urlOriginal.includes('/d/')) {
+        const partes = urlOriginal.split('/d/')[1]; // Corta desde /d/
+        const id = partes.split('/')[0]; // Corta hasta el siguiente /
+        if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+      }
+
+      // Estrategia 2: Formato con ?id=
+      if (urlOriginal.includes('id=')) {
+        const partes = urlOriginal.split('id=')[1];
+        const id = partes.split('&')[0];
+        if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+      }
+    } catch (e) {
+      console.log('Error parseando link:', e);
+    }
+
+    return urlOriginal; // Si todo falla, devuelve el original
+  };
+
   const handleSubmit = async () => {
     if (!name || !price || !categoryId || !imageUri) {
       Alert.alert('Faltan datos', 'Por favor llena todos los campos y coloca una URL para la imagen.');
@@ -77,14 +101,19 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
 
     try {
       setIsSubmitting(true);
-      
+
+      const finalImageUri = obtenerLinkDirecto(imageUri);
+
+      console.log('LINK ORIGINAL:', imageUri);
+      console.log('LINK TRANSFORMADO:', finalImageUri);
+
       await inventoryRepository.createProduct({
         name,
         description,
         price: parseFloat(price),
         categoryId,
         ecoServiceId: parseInt(ecoServiceId, 10),
-        imageUri,
+        imageUri: finalImageUri,
       });
 
       // Invalidate to refresh the list
@@ -103,8 +132,8 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <KeyboardAvoidingView 
-        style={s.flex1} 
+      <KeyboardAvoidingView
+        style={s.flex1}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={s.header}>
@@ -115,7 +144,7 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
         </View>
 
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-          
+
           <View style={s.inputGroup}>
             <Text style={s.label}>URL de la Imagen <Text style={s.req}>*</Text></Text>
             <TextInput
@@ -190,9 +219,9 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
         </ScrollView>
 
         <View style={s.footer}>
-          <Pressable 
-            style={[s.submitBtn, isSubmitting && s.submitBtnDisabled]} 
-            onPress={handleSubmit} 
+          <Pressable
+            style={[s.submitBtn, isSubmitting && s.submitBtnDisabled]}
+            onPress={handleSubmit}
             disabled={isSubmitting}
           >
             {isSubmitting ? (
