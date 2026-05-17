@@ -27,17 +27,15 @@ export const authRepository = {
 
   /**
    * POST /auth/register
-   * Creates a new account; role is sent from the registration form.
    */
   register: async (
-    name: string,
     email: string,
     password: string,
     role: 'customer' | 'ecoservice',
   ): Promise<{ user: AuthUser; token: string }> => {
     const response = await apiClient.post<{ data: { user: AuthUser; token: string } }>(
       '/auth/register',
-      { name, email, password, role },
+      { email, password, role },
     );
     return response.data.data;
   },

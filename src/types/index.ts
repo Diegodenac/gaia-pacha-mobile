@@ -9,9 +9,7 @@ export type UserRole = 'customer' | 'ecoservice';
 export interface AuthUser {
   id: string;
   email: string;
-  name: string;
   role: UserRole;
-  avatarUrl?: string;
   createdAt: string;
 }
 
