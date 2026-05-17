@@ -34,6 +34,7 @@ function enrichWithMockFallback(
 // ── Repository ────────────────────────────────────────────────────────────────
 export interface EnterprisesFilters {
   category?: 'all' | EcoCategory;
+  categoryId?: number | null;
   search?: string;
   page?: number;
   limit?: number;
@@ -92,7 +93,9 @@ export const enterprisesRepository = {
    */
   getAll: async (filters: EnterprisesFilters = {}): Promise<PaginatedEnterprises> => {
     const params: Record<string, string | number> = {};
-    if (filters.category && filters.category !== 'all') {
+    if (filters.categoryId != null) {
+      params.categoryId = filters.categoryId;
+    } else if (filters.category && filters.category !== 'all') {
       params.category = filters.category;
     }
     if (filters.search?.trim()) {
@@ -142,5 +145,30 @@ export const enterprisesRepository = {
     const enterprise = response.data.data;
     const fallbackIdx = GREEN_ENTERPRISES.findIndex(e => e.category === enterprise.category);
     return enrichWithMockFallback(enterprise, fallbackIdx >= 0 ? fallbackIdx : 0);
+  },
+};
+
+// ── Categories ────────────────────────────────────────────────────────────────
+export interface ApiCategory {
+  id: number;
+  name: string;
+}
+
+export const categoriesRepository = {
+  /**
+   * GET /api/categories — returns the full list of categories from the DB.
+   */
+  getAll: async (): Promise<ApiCategory[]> => {
+    const response = await axios.get<{ success: boolean; data: Array<{ id_categoria: number; nombre_categoria: string }>; error?: string }>(
+      `${BACKEND_URL}/api/categories`,
+      { timeout: 8000 },
+    );
+    if (!response.data.success || !Array.isArray(response.data.data)) {
+      throw new Error(response.data.error ?? 'Invalid categories response');
+    }
+    return response.data.data.map((row) => ({
+      id: row.id_categoria,
+      name: row.nombre_categoria,
+    }));
   },
 };

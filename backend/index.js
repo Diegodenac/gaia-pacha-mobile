@@ -215,7 +215,7 @@ app.get('/health', (_req, res) => {
 // GET /api/enterprises — list with optional ?category=&search=&page=&limit= filters
 app.get('/api/enterprises', async (req, res) => {
   try {
-    const { search, category } = req.query;
+    const { search, category, categoryId } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -229,7 +229,11 @@ app.get('/api/enterprises', async (req, res) => {
       clauses.push(`(LOWER(e.nombre_emprendimiento) LIKE $${n} OR LOWER(e.descripcion_detallada) LIKE $${n})`);
     }
 
-    if (category && category !== 'all') {
+    // Filter by exact DB category id (preferred when chips come from /api/categories)
+    if (categoryId) {
+      params.push(parseInt(categoryId));
+      clauses.push(`sc_link.id_categoria = $${params.length}`);
+    } else if (category && category !== 'all') {
       let catNames = [];
       if (category === 'organic_food') catNames = ['aliment', 'bebida', 'orgán', 'organic'];
       else if (category === 'sustainable_fashion') catNames = ['moda', 'textil', 'tejido', 'ropa', 'fashion'];

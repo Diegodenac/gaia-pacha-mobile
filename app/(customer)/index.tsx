@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -13,9 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ImpactServiceCard } from '@molecules/ImpactServiceCard';
-import { HOME_CATEGORIES } from '@/features/customer/home/mockData';
 import { useEnterprisesQuery } from '@/features/customer/home/hooks/useEnterprisesQuery';
-import type { EcoCategory } from '@/types';
+import { useCategoriesQuery } from '@/features/customer/home/hooks/useCategoriesQuery';
+import { useDebounce } from '@/lib/useDebounce';
 
 const LOGO_URI =
   'https://gaiapacha.org/wp-content/uploads/2023/07/Portada-FGP-1-1024x341.png';
@@ -26,50 +26,129 @@ const IMPACT_STATS = [
   { icon: 'people-outline' as const,   value: '3',   label: 'Comunidades\nimpactadas' },
 ];
 
+const ALL_CHIP = { id: null as number | null, name: 'Todas' };
+
 export default function CustomerHomeScreen() {
   const [searchInput, setSearchInput] = useState('');
-  const [activeCategory, setActiveCategory] = useState<'all' | EcoCategory>('all');
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
 
-  // Get enterprises WITHOUT search (search is done client-side)
-  const { 
-    enterprises: allEnterprises, 
-    isLoading, 
-    isError, 
+  // Debounce the search input so we don't fire a DB query on every keystroke.
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  const {
+    enterprises,
+    isLoading,
+    isFetching,
+    isError,
     isFromBackend,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage 
-  } = useEnterprisesQuery({ category: activeCategory });
+    isFetchingNextPage,
+  } = useEnterprisesQuery({ search: debouncedSearch, categoryId: activeCategoryId });
 
-  // Filter enterprises locally for instant search - no DB queries!
-  const filteredEnterprises = allEnterprises.filter(enterprise => {
-    const searchLower = searchInput.toLowerCase().trim();
-    if (!searchLower) return true;
+  const { data: categories = [] } = useCategoriesQuery();
+  const chips = useMemo(() => [ALL_CHIP, ...categories], [categories]);
 
-    // Search in: name, description, category
-    return (
-      enterprise.name?.toLowerCase().includes(searchLower) ||
-      enterprise.description?.toLowerCase().includes(searchLower) ||
-      enterprise.categoryLabel?.toLowerCase().includes(searchLower) ||
-      enterprise.keywords?.some(kw => kw.toLowerCase().includes(searchLower))
-    );
-  });
+  const activeChipLabel =
+    activeCategoryId === null
+      ? 'Todas las empresas'
+      : categories.find((c) => c.id === activeCategoryId)?.name ?? 'Empresas';
 
-  // Use filtered enterprises for display, but original for pagination
-  const enterprises = filteredEnterprises;
+  return (
+    <View style={s.root}>
+      <StatusBar barStyle="light-content" backgroundColor="#064E3B" />
+      <FlatList
+        data={enterprises}
+        keyExtractor={(item, index) => item.id || index.toString()}
+        renderItem={({ item }) => <ImpactServiceCard enterprise={item} />}
+        contentContainerStyle={[s.scroll, { paddingHorizontal: 20 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          // IMPORTANT: pass an element (not a function) so the TextInput inside
+          // never remounts on parent re-renders. Functions passed here are
+          // treated as component types, and a new arrow on every render causes
+          // the search input to lose focus on every keystroke.
+          <HomeHeader
+            searchInput={searchInput}
+            onSearchChange={setSearchInput}
+            chips={chips}
+            activeCategoryId={activeCategoryId}
+            onCategoryPress={setActiveCategoryId}
+            activeChipLabel={activeChipLabel}
+            resultsCount={enterprises.length}
+            isFetching={isFetching}
+            isFromBackend={isFromBackend}
+            isError={isError}
+          />
+        }
+        ListEmptyComponent={
+          isLoading ? null : (
+            <View style={s.empty}>
+              <View style={s.emptyIcon}>
+                <Ionicons name="leaf-outline" size={40} color="#6EE7B7" />
+              </View>
+              <Text style={s.emptyTitle}>Sin resultados</Text>
+              <Text style={s.emptySubtitle}>
+                Intenta con otra categoría o palabra clave
+              </Text>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#059669" />
+            </View>
+          ) : null
+        }
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+      />
+    </View>
+  );
+}
 
-  const renderHeader = () => (
+// ── Header (memoized so the search input never remounts) ──────────────────────
+interface HomeHeaderProps {
+  searchInput: string;
+  onSearchChange: (v: string) => void;
+  chips: Array<{ id: number | null; name: string }>;
+  activeCategoryId: number | null;
+  onCategoryPress: (id: number | null) => void;
+  activeChipLabel: string;
+  resultsCount: number;
+  isFetching: boolean;
+  isFromBackend: boolean;
+  isError: boolean;
+}
+
+const HomeHeader = React.memo(function HomeHeader({
+  searchInput,
+  onSearchChange,
+  chips,
+  activeCategoryId,
+  onCategoryPress,
+  activeChipLabel,
+  resultsCount,
+  isFetching,
+  isFromBackend,
+  isError,
+}: HomeHeaderProps) {
+  return (
     <>
       {/* ── HERO ──────────────────────────────────────────────── */}
       <View style={s.hero}>
-        {/* Decorative nature rings */}
         <View style={s.ring1} />
         <View style={s.ring2} />
         <View style={s.ring3} />
         <View style={s.ring4} />
 
         <SafeAreaView edges={['top']} style={s.heroContent}>
-          {/* Gaia Pacha logo — featured card with green glow */}
           <View style={s.logoCardOuter}>
             <View style={s.logoCard}>
               <Image
@@ -81,15 +160,12 @@ export default function CustomerHomeScreen() {
             </View>
           </View>
 
-          {/* Tagline */}
           <Text style={s.tagline}>
             Conectando soluciones verdes{'\n'}con quienes las necesitan
           </Text>
 
-          {/* Accent divider */}
           <View style={s.heroDivider} />
 
-          {/* Impact stats */}
           <View style={s.statsRow}>
             {IMPACT_STATS.map((stat, i) => (
               <React.Fragment key={i}>
@@ -104,7 +180,6 @@ export default function CustomerHomeScreen() {
           </View>
         </SafeAreaView>
 
-        {/* Rounded wave — transition to content background */}
         <View style={s.heroWave} />
       </View>
 
@@ -117,33 +192,35 @@ export default function CustomerHomeScreen() {
             placeholder="Buscar emprendimientos verdes..."
             placeholderTextColor="#9CA3AF"
             value={searchInput}
-            onChangeText={setSearchInput}
+            onChangeText={onSearchChange}
             returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
           />
           {searchInput.length > 0 && (
-            <Pressable onPress={() => setSearchInput('')} hitSlop={8}>
+            <Pressable onPress={() => onSearchChange('')} hitSlop={8}>
               <Ionicons name="close-circle" size={18} color="#9CA3AF" />
             </Pressable>
           )}
         </View>
       </View>
 
-      {/* ── CATEGORY CHIPS ────────────────────────────────────── */}
+      {/* ── CATEGORY CHIPS (dynamic from /api/categories) ─────── */}
       <FlatList
         horizontal
-        data={HOME_CATEGORIES}
-        keyExtractor={(item) => item.id}
+        data={chips}
+        keyExtractor={(item) => String(item.id ?? 'all')}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={s.chips}
         renderItem={({ item: cat }) => {
-          const active = activeCategory === cat.id;
+          const active = activeCategoryId === cat.id;
           return (
             <Pressable
-              onPress={() => setActiveCategory(cat.id as 'all' | EcoCategory)}
+              onPress={() => onCategoryPress(cat.id)}
               style={[s.chip, active && s.chipActive]}
             >
               <Text style={[s.chipText, active && s.chipTextActive]}>
-                {cat.label}
+                {cat.name}
               </Text>
             </Pressable>
           );
@@ -153,22 +230,17 @@ export default function CustomerHomeScreen() {
       {/* ── RESULTS HEADER ───────────────────────────────────────────── */}
       <View style={s.results}>
         <View style={s.resultsHeader}>
-          <Text style={s.resultsTitle}>
-            {activeCategory === 'all'
-              ? 'Todas las empresas'
-              : HOME_CATEGORIES.find((c) => c.id === activeCategory)?.label ?? 'Empresas'}
-          </Text>
+          <Text style={s.resultsTitle}>{activeChipLabel}</Text>
           <View style={s.resultsRight}>
-            {isLoading && (
+            {isFetching && (
               <ActivityIndicator size="small" color="#059669" style={{ marginRight: 8 }} />
             )}
             <View style={s.countBadge}>
-              <Text style={s.countText}>{enterprises.length}</Text>
+              <Text style={s.countText}>{resultsCount}</Text>
             </View>
           </View>
         </View>
 
-        {/* Data source indicator */}
         <View style={[s.sourceBadge, isFromBackend ? s.sourceLive : s.sourceMock]}>
           <Ionicons
             name={isFromBackend ? 'cloud-done-outline' : 'server-outline'}
@@ -179,60 +251,14 @@ export default function CustomerHomeScreen() {
             {isFromBackend
               ? 'Datos en vivo · DB Aiven'
               : isError
-              ? 'Sin conexión al backend · Datos de ejemplo'
+              ? 'Sin conexión al backend'
               : 'Cargando datos...'}
           </Text>
         </View>
       </View>
     </>
   );
-
-  const renderEmpty = () => {
-    if (isLoading) return null;
-    return (
-      <View style={s.empty}>
-        <View style={s.emptyIcon}>
-          <Ionicons name="leaf-outline" size={40} color="#6EE7B7" />
-        </View>
-        <Text style={s.emptyTitle}>Sin resultados</Text>
-        <Text style={s.emptySubtitle}>
-          Intenta con otra categoría o palabra clave
-        </Text>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#059669" />
-      </View>
-    );
-  };
-
-  return (
-    <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#064E3B" />
-      <FlatList
-        data={enterprises}
-        keyExtractor={(item, index) => item.id || index.toString()}
-        renderItem={({ item }) => <ImpactServiceCard enterprise={item} />}
-        contentContainerStyle={[s.scroll, { paddingHorizontal: 20 }]}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) {
-            fetchNextPage();
-          }
-        }}
-        onEndReachedThreshold={0.5}
-      />
-    </View>
-  );
-}
+});
 
 const s = StyleSheet.create({
   root: {
@@ -455,7 +481,6 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  // data source indicator
   sourceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
