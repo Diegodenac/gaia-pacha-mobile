@@ -4,22 +4,8 @@ import { GREEN_ENTERPRISES } from '@/features/customer/home/mockData';
 import type { GreenEnterprise } from '@/features/customer/home/mockData';
 import type { EcoCategory } from '@/types';
 
-// ── Backend URL auto-detection ────────────────────────────────────────────────
-/**
- * In Expo Go, `hostUri` is the IP:port Metro is using (e.g. "192.168.100.127:8081").
- * We strip the port and replace it with the backend port (3000).
- * This works automatically as long as the phone and PC are on the same WiFi.
- */
-function getBackendUrl(): string {
-  const hostUri = Constants.expoConfig?.hostUri; // "192.168.x.x:8081"
-  if (hostUri) {
-    const host = hostUri.split(':')[0];
-    return `http://${host}:3000`;
-  }
-  return 'http://localhost:3000';
-}
-
-export const BACKEND_URL = getBackendUrl();
+// ── Backend URL ────────────────────────────────────────────────────────────────
+const BACKEND_URL = 'https://gaia-pacha-backend.onrender.com';
 
 // ── Mock fallback enrichment ──────────────────────────────────────────────────
 /**
