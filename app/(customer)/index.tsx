@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   FlatList,
@@ -28,26 +28,35 @@ const IMPACT_STATS = [
 
 export default function CustomerHomeScreen() {
   const [searchInput, setSearchInput] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | EcoCategory>('all');
 
-  // Debounce search input to avoid hitting the DB on every keystroke
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchInput);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
+  // Get enterprises WITHOUT search (search is done client-side)
   const { 
-    enterprises, 
+    enterprises: allEnterprises, 
     isLoading, 
     isError, 
     isFromBackend,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage 
-  } = useEnterprisesQuery({ search: debouncedSearch, category: activeCategory });
+  } = useEnterprisesQuery({ category: activeCategory });
+
+  // Filter enterprises locally for instant search - no DB queries!
+  const filteredEnterprises = allEnterprises.filter(enterprise => {
+    const searchLower = searchInput.toLowerCase().trim();
+    if (!searchLower) return true;
+
+    // Search in: name, description, category
+    return (
+      enterprise.name?.toLowerCase().includes(searchLower) ||
+      enterprise.description?.toLowerCase().includes(searchLower) ||
+      enterprise.categoryLabel?.toLowerCase().includes(searchLower) ||
+      enterprise.keywords?.some(kw => kw.toLowerCase().includes(searchLower))
+    );
+  });
+
+  // Use filtered enterprises for display, but original for pagination
+  const enterprises = filteredEnterprises;
 
   const renderHeader = () => (
     <>
