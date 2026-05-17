@@ -56,7 +56,7 @@ otherwise                                  →  /(customer)
 Both tabs replicate the Customer implementation exactly — same hooks (`useEnterprisesQuery`, `useCatalogQuery`), same layout, same data source. EcoService owners browse the full marketplace alongside customers.
 
 ### Profile — EcoService Switcher
-The profile screen includes an `EcoServiceSwitcher` component that lists owned enterprises. Currently renders the active enterprise with an "Agregar otro EcoService" placeholder row (disabled). Designed to expand into a real multi-enterprise switcher when the backend supports it.
+The profile screen includes an `EcoServiceSwitcher` component that fetches the full enterprise list from `/api/enterprises` via `useEcoServiceListQuery` and renders each as a selectable row (thumbnail, name, location). Tapping a row calls `setActiveEcoServiceId(enterprise.id)` in `useEcoServiceStore`, which the Products tab subscribes to. The first enterprise is auto-selected on load if nothing is active. Active state is shown with a green checkmark; inactive rows show an empty radio circle.
 
 ### PDP Editor
 Loads the current user's enterprise via `useEnterpriseDetailQuery(user.id)`. Renders the full enterprise detail view (identical to what customers see in `app/enterprise/[id].tsx`) with these differences:
@@ -67,10 +67,11 @@ Loads the current user's enterprise via `useEnterpriseDetailQuery(user.id)`. Ren
 
 ### Products
 Uses the Explore grid layout (2-column `FlatList`, search bar, category chips). Data flow:
-1. `useMyProductsQuery(user.id)` calls `useCatalogQuery({ ecoServiceId: user.id })`
-2. Results are also filtered client-side by `product.ecoServiceId` for reliability
-3. Unavailable products show a "No disponible" overlay badge
-4. "Agregar" button is present but `disabled` — functionality deferred to next iteration
+1. Reads `activeEcoServiceId` from `useEcoServiceStore()` (falls back to `user.id`)
+2. `useMyProductsQuery(ecoServiceId)` calls `useCatalogQuery({ ecoServiceId })` + client-side filter
+3. Switching enterprise in Profile immediately updates the product list (shared Zustand state)
+4. Unavailable products show a "No disponible" overlay badge
+5. "Agregar" button is present but `disabled` — functionality deferred to next iteration
 
 ---
 
@@ -101,12 +102,21 @@ A `Switch` in the Customer Profile screen allows developers to render the EcoSer
 
 ## Data Layer — EcoService-specific
 
-| Hook                    | Location                                                        | Purpose                                  |
-|-------------------------|-----------------------------------------------------------------|------------------------------------------|
-| `useMyProductsQuery`    | `src/features/ecoservice/products/hooks/useMyProductsQuery.ts`  | Filtered product list for current user   |
-| `useEnterpriseDetailQuery` | `src/features/customer/home/hooks/useEnterpriseDetailQuery.ts` | Enterprise PDP data (shared)             |
-| `useCatalogQuery`       | `src/features/customer/catalog/hooks/useCatalogQuery.ts`        | Full catalog (shared by Explore tabs)    |
-| `useEnterprisesQuery`   | `src/features/customer/home/hooks/useEnterprisesQuery.ts`       | Enterprise list (shared by Home tabs)    |
+| Hook                       | Location                                                              | Purpose                                        |
+|----------------------------|-----------------------------------------------------------------------|------------------------------------------------|
+| `useMyProductsQuery`       | `src/features/ecoservice/products/hooks/useMyProductsQuery.ts`        | Products filtered by `activeEcoServiceId`      |
+| `useEcoServiceListQuery`   | `src/features/ecoservice/switcher/hooks/useEcoServiceListQuery.ts`    | Flat enterprise list for the switcher          |
+| `useEnterpriseDetailQuery` | `src/features/customer/home/hooks/useEnterpriseDetailQuery.ts`        | Enterprise PDP data (shared)                   |
+| `useCatalogQuery`          | `src/features/customer/catalog/hooks/useCatalogQuery.ts`              | Full catalog (shared by Explore tabs)          |
+| `useEnterprisesQuery`      | `src/features/customer/home/hooks/useEnterprisesQuery.ts`             | Paginated enterprise list (shared by Home tabs)|
+
+### Stores
+
+| Store               | Location                           | Purpose                                                    |
+|---------------------|------------------------------------|------------------------------------------------------------|
+| `useAuthStore`      | `src/store/authStore.ts`           | Auth user state (login, logout, role)                      |
+| `useDevStore`       | `src/store/devStore.ts`            | Dev preview toggle (Customer ↔ EcoService)                 |
+| `useEcoServiceStore`| `src/store/ecoServiceStore.ts`     | Active enterprise selection — shared between Profile and Products |
 
 `CatalogFilters` in `src/repositories/catalog.repository.ts` now includes `ecoServiceId?: string` for server-side filtering support.
 

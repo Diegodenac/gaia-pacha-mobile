@@ -15,6 +15,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { useEcoServiceStore } from '@/store/ecoServiceStore';
 import { useMyProductsQuery } from '@/features/ecoservice/products/hooks/useMyProductsQuery';
 import type { Product } from '@/types';
 
@@ -24,10 +25,13 @@ const CARD_WIDTH = (width - 40 - CARD_MARGIN) / 2;
 
 export default function EcoServiceProductsScreen() {
   const { user } = useAuthStore();
+  const { activeEcoServiceId } = useEcoServiceStore();
   const [searchInput, setSearchInput] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
-  const { myProducts, isLoading } = useMyProductsQuery(user?.id ?? '');
+  // Prefer the switcher selection; fall back to the authenticated user's own ID
+  const ecoServiceId = activeEcoServiceId ?? user?.id ?? '';
+  const { myProducts, isLoading } = useMyProductsQuery(ecoServiceId);
 
   const categories = useMemo(() => {
     const cats = new Set(myProducts.map((p) => p.categoryName).filter(Boolean));
