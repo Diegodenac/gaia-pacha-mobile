@@ -1,10 +1,9 @@
 import axios from 'axios';
-import Constants from 'expo-constants';
 import { GREEN_ENTERPRISES } from '@/features/customer/home/mockData';
 import type { GreenEnterprise } from '@/features/customer/home/mockData';
 import type { EcoCategory } from '@/types';
 
-// ── Backend URL ────────────────────────────────────────────────────────────────
+// ── Backend URL ───────────────────────────────────────────────────────────────
 const BACKEND_URL = 'https://gaia-pacha-backend.onrender.com';
 
 // ── Mock fallback enrichment ──────────────────────────────────────────────────
@@ -71,5 +70,24 @@ export const enterprisesRepository = {
     return response.data.data.map((enterprise, i) =>
       enrichWithMockFallback(enterprise, i),
     );
+  },
+
+  /**
+   * Fetches a single enterprise by ID.
+   * Enriches missing visual fields from mock data.
+   */
+  getById: async (id: string): Promise<GreenEnterprise> => {
+    const response = await axios.get<{ success: boolean; data: GreenEnterprise; error?: string }>(
+      `${BACKEND_URL}/api/enterprises/${id}`,
+      { timeout: 8000 },
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error ?? 'Enterprise not found');
+    }
+
+    const enterprise = response.data.data;
+    const fallbackIdx = GREEN_ENTERPRISES.findIndex(e => e.category === enterprise.category);
+    return enrichWithMockFallback(enterprise, fallbackIdx >= 0 ? fallbackIdx : 0);
   },
 };

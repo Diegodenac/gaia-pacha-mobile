@@ -49,6 +49,8 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           {/* Root index — handles auth/role redirect logic */}
           <Stack.Screen name="index" />
+          {/* Enterprise detail — full-screen, no tab bar */}
+          <Stack.Screen name="enterprise/[id]" options={{ animation: 'slide_from_right' }} />
           {/* Customer tab group */}
           <Stack.Screen name="(customer)" />
           {/* EcoService tab group */}
