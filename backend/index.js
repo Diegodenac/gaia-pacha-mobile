@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'gaia-pacha-dev-secret-change-in-prod';
+const JWT_EXPIRES_IN = '30d';
 const multer = require('multer');
 const { google } = require('googleapis');
 const fs = require('fs');
@@ -27,6 +31,159 @@ pool.connect((err, client, release) => {
     console.log('✅ Conexión EXITOSA a la base de datos PostgreSQL en Aiven!');
     release();
   }
+});
+
+// ── DB Init — crea la tabla si no existe (schema real de Aiven) ───────────────
+
+pool.query(`
+  CREATE TABLE IF NOT EXISTS usuarios (
+    id_usuarios    SERIAL PRIMARY KEY,
+    email          VARCHAR(255) UNIQUE NOT NULL,
+    password_hash  VARCHAR(255) NOT NULL,
+    tipo_usuario   VARCHAR(50)  NOT NULL DEFAULT 'customer'
+                   CHECK (tipo_usuario IN ('customer', 'ecoservice')),
+    fecha_registro TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  )
+`).then(() => {
+  console.log('✅ Tabla usuarios lista');
+}).catch((err) => {
+  console.error('❌ Error creando tabla usuarios:', err.message);
+});
+
+// ── Auth helpers ──────────────────────────────────────────────────────────────
+
+function makeUserPayload(row) {
+  return {
+    id:        String(row.id_usuarios),
+    email:     row.email,
+    role:      row.tipo_usuario,
+    createdAt: row.fecha_registro,
+  };
+}
+
+function authMiddleware(req, res, next) {
+  const header = req.headers.authorization ?? '';
+  if (!header.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: 'No autorizado' });
+  }
+  try {
+    req.user = jwt.verify(header.slice(7), JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ success: false, error: 'Token inválido o expirado' });
+  }
+}
+
+// ── Auth Routes ───────────────────────────────────────────────────────────────
+
+// POST /auth/register  { email, password, role }
+app.post('/auth/register', async (req, res) => {
+  try {
+    const { email, password, role = 'customer' } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email y contraseña son requeridos' });
+    }
+    if (!['customer', 'ecoservice'].includes(role)) {
+      return res.status(400).json({ success: false, error: 'Tipo de usuario inválido' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existing = await pool.query(
+      'SELECT id_usuarios FROM usuarios WHERE email = $1',
+      [normalizedEmail],
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ success: false, error: 'El email ya está registrado' });
+    }
+
+    const result = await pool.query(
+      'INSERT INTO usuarios (email, password_hash, tipo_usuario) VALUES ($1, $2, $3) RETURNING *',
+      [normalizedEmail, password, role],
+    );
+
+    const user = result.rows[0];
+    const token = jwt.sign(
+      { id: user.id_usuarios, email: user.email, role: user.tipo_usuario },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN },
+    );
+
+    console.log(`[POST /auth/register] id=${user.id_usuarios} tipo=${user.tipo_usuario}`);
+    res.status(201).json({ success: true, data: { user: makeUserPayload(user), token } });
+  } catch (err) {
+    console.error('[POST /auth/register]', err.message);
+    res.status(500).json({ success: false, error: 'Error al crear la cuenta' });
+  }
+});
+
+// POST /auth/login  { email, password }
+app.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email y contraseña son requeridos' });
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM usuarios WHERE email = $1',
+      [email.trim().toLowerCase()],
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
+    }
+
+    const user = result.rows[0];
+    if (password !== user.password_hash) {
+      return res.status(401).json({ success: false, error: 'Credenciales incorrectas' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id_usuarios, email: user.email, role: user.tipo_usuario },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN },
+    );
+
+    console.log(`[POST /auth/login] id=${user.id_usuarios}`);
+    res.json({ success: true, data: { user: makeUserPayload(user), token } });
+  } catch (err) {
+    console.error('[POST /auth/login]', err.message);
+    res.status(500).json({ success: false, error: 'Error al iniciar sesión' });
+  }
+});
+
+// POST /auth/logout — JWT es stateless; el cliente descarta el token
+app.post('/auth/logout', (_req, res) => {
+  res.json({ success: true });
+});
+
+// GET /auth/me — usuario actual desde el token
+app.get('/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM usuarios WHERE id_usuarios = $1',
+      [req.user.id],
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+    res.json({ success: true, data: makeUserPayload(result.rows[0]) });
+  } catch (err) {
+    console.error('[GET /auth/me]', err.message);
+    res.status(500).json({ success: false, error: 'Error al obtener usuario' });
+  }
+});
+
+// POST /auth/forgot-password — stub
+app.post('/auth/forgot-password', (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, error: 'Email es requerido' });
+  }
+  console.log(`[POST /auth/forgot-password] solicitado para ${email}`);
+  res.json({ success: true, message: 'Si el email existe, recibirás un enlace de recuperación' });
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

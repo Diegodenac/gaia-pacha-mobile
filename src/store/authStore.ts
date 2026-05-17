@@ -14,9 +14,10 @@ const secureStorage = {
 
 // ─── Store Interface ──────────────────────────────────────────────────────────
 interface AuthStore extends AuthState {
-  login:  (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  setUser:(user: AuthUser) => void;
+  login:    (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, role: 'customer' | 'ecoservice') => Promise<void>;
+  logout:   () => Promise<void>;
+  setUser:  (user: AuthUser) => void;
 }
 
 /**
@@ -44,6 +45,17 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
         try {
           const { user, token } = await authRepository.login(email, password);
+          set({ user, token, isAuthenticated: true, isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      register: async (email, password, role) => {
+        set({ isLoading: true });
+        try {
+          const { user, token } = await authRepository.register(email, password, role);
           set({ user, token, isAuthenticated: true, isLoading: false });
         } catch (error) {
           set({ isLoading: false });
