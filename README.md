@@ -41,17 +41,28 @@ npx expo install --fix
 
 ---
 
-## Architecture Documentation
+## Documentation Index
 
-The following documents constitute the complete architectural specification for this MVP. **Read them in order** before writing any code.
+Start with these **core documentation** files to understand the app:
 
-| # | Document | Location | Purpose |
-|---|---|---|---|
-| 1 | **TECH_STACK_CONFIG.md** | `docs/TECH_STACK_CONFIG.md` | Full technology stack rationale, NativeWind v4 setup, EAS Build commands, Metro optimizations, and zero-to-running installation guide. **Start here.** |
-| 2 | **ARCHITECTURE_AND_DIRECTORIES.md** | `docs/ARCHITECTURE_AND_DIRECTORIES.md` | Feature-First + Clean Architecture explanation, complete annotated directory tree, Atomic Design placement rules (Atoms → Molecules → Organisms → Templates → Pages), dependency direction law, and cloud provider integration strategy. |
-| 3 | **NAVIGATION_FLOWS.md** | `docs/NAVIGATION_FLOWS.md` | Complete Expo Router routing map, auth guard pattern, role-based redirect logic, Customer and EcoService tab navigation specs, deep linking configuration, lazy loading and tab state persistence implementation details. |
-| 4 | **DATA_OPTIMIZATION_CACHING.md** | `docs/DATA_OPTIMIZATION_CACHING.md` | TanStack Query client configuration, three-tier cache time policy (LONG/MEDIUM/SHORT), centralized QUERY_KEYS factory, repository data flow diagram, mutation + cache invalidation patterns, Zustand auth persistence, and EcoService polling strategy. |
-| 5 | **DEVELOPMENT_GUIDELINES_AI.md** | `docs/DEVELOPMENT_GUIDELINES_AI.md` | Team split strategy for conflict-free parallel development, TypeScript naming conventions, reusable AI prompt snippets for atoms/molecules/hooks/repositories, NativeWind code conventions, hackathon pragmatic trade-offs, and import alias quick reference. |
+| Document | Location | Purpose |
+|---|---|---|
+| **Setup.md** | `docs/Setup.md` | Local development environment setup, prerequisites, and installation steps. **Start here for new developers.** |
+| **Architecture.md** | `docs/Architecture.md` | System design, file organization, data flow patterns, and key design decisions. |
+| **Features.md** | `docs/Features.md` | Implemented features, core modules, dependencies, and roadmap. |
+
+### Extended Architecture Documentation
+
+Additional comprehensive reference documents:
+
+| Document | Location | Purpose |
+|---|---|---|
+| **TECH_STACK_CONFIG.md** | `docs/TECH_STACK_CONFIG.md` | Full technology stack rationale, NativeWind v4 setup, EAS Build commands, Metro optimizations. |
+| **ARCHITECTURE_AND_DIRECTORIES.md** | `docs/ARCHITECTURE_AND_DIRECTORIES.md` | Detailed feature-first architecture explanation, directory tree with annotations, Atomic Design rules. |
+| **NAVIGATION_FLOWS.md** | `docs/NAVIGATION_FLOWS.md` | Complete Expo Router routing map, auth guards, role-based redirects, deep linking configuration. |
+| **DATA_OPTIMIZATION_CACHING.md** | `docs/DATA_OPTIMIZATION_CACHING.md` | TanStack Query configuration, cache strategy, mutations, Zustand persistence patterns. |
+| **DEVELOPMENT_GUIDELINES_AI.md** | `docs/DEVELOPMENT_GUIDELINES_AI.md` | Team development strategy, naming conventions, AI prompt templates, pragmatic trade-offs. |
+| **SESSION_PROGRESS.md** | `docs/SESSION_PROGRESS.md` | Current feature status, known issues, blockers, and roadmap progress. |
 
 ---
 

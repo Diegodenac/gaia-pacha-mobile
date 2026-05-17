@@ -1,7 +1,13 @@
-# Gaia Pacha — Recommendation Engine API 🧠🌱
+# Gaia Pacha — Recommendation Engine API
 
-> **The intelligent core behind the Gaia Pacha feed.**
-> A lightweight, isolated Node.js microservice that calculates personalized Ecoservice and Category recommendations using a dynamic scoring algorithm and an 80/20 (Exploitation/Exploration) distribution.
+Lightweight Node.js microservice providing personalized ecosystem service and category recommendations using collaborative filtering with 80/20 exploitation/exploration.
+
+## Documentation
+
+- **[Architecture.md](docs/Architecture.md)** - System design and integration patterns
+- **[Setup.md](docs/Setup.md)** - Local development configuration
+- **[Features.md](docs/Features.md)** - Algorithm overview and capabilities
+- **[ALGORITHM_SPECIFICATION.md](docs/ALGORITHM_SPECIFICATION.md)** - Mathematical specification
 
 ---
 
