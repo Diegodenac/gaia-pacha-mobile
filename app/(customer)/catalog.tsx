@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,7 @@ export default function CatalogScreen() {
   const [searchInput, setSearchInput] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
-  const { data, isLoading, isError } = useCatalogQuery();
+  const { data, isLoading } = useCatalogQuery();
 
   const products = data?.data || [];
 

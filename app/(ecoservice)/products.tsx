@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { Link } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useEcoServiceStore } from '@/store/ecoServiceStore';
 import { useMyProductsQuery } from '@/features/ecoservice/products/hooks/useMyProductsQuery';
+import { AddProductModal } from '@/features/ecoservice/products/components/AddProductModal';
 import type { Product } from '@/types';
 
 const { width } = Dimensions.get('window');
@@ -28,6 +29,7 @@ export default function EcoServiceProductsScreen() {
   const { activeEcoServiceId } = useEcoServiceStore();
   const [searchInput, setSearchInput] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   // Prefer the switcher selection; fall back to the authenticated user's own ID
   const ecoServiceId = activeEcoServiceId ?? user?.id ?? '';
@@ -50,8 +52,7 @@ export default function EcoServiceProductsScreen() {
     <View style={s.headerContainer}>
       <View style={s.titleRow}>
         <Text style={s.pageTitle}>Mis Productos</Text>
-        {/* Add Product CTA — UI only, functionality disabled for this iteration */}
-        <Pressable style={s.addBtn} disabled>
+        <Pressable style={s.addBtn} onPress={() => setIsModalVisible(true)}>
           <Ionicons name="add" size={18} color="#fff" />
           <Text style={s.addBtnText}>Agregar</Text>
         </Pressable>
@@ -164,6 +165,11 @@ export default function EcoServiceProductsScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
+      />
+      <AddProductModal
+        visible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+        ecoServiceId={ecoServiceId}
       />
     </SafeAreaView>
   );

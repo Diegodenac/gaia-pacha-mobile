@@ -22,6 +22,7 @@ ios/
 google-services-key.json
 GoogleService-Info.plist
 google-services.json
+google-credentials.json
 
 # Environment variables
 .env

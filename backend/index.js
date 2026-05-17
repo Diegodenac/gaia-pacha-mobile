@@ -6,10 +6,17 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gaia-pacha-dev-secret-change-in-prod';
 const JWT_EXPIRES_IN = '30d';
+const multer = require('multer');
+const { google } = require('googleapis');
+const fs = require('fs');
+const path = require('path');
+const { Readable } = require('stream');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // ── DB Pool ───────────────────────────────────────────────────────────────────
 const pool = new Pool({
@@ -200,6 +207,58 @@ function convertDriveUrl(url) {
 }
 
 /**
+ * Uploads a file buffer to Google Drive using a Service Account.
+ */
+async function uploadToDrive(fileBuffer, fileName, mimeType) {
+  const credentialsPath = path.join(__dirname, 'google-credentials.json');
+  if (!fs.existsSync(credentialsPath)) {
+    console.warn('⚠️ No google-credentials.json found. Using mock image URL.');
+    return 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80';
+  }
+
+  const auth = new google.auth.GoogleAuth({
+    keyFile: credentialsPath,
+    scopes: ['https://www.googleapis.com/auth/drive.file'],
+  });
+
+  const drive = google.drive({ version: 'v3', auth });
+  const folderId = '1VM3QIftPvHOPw_L2cb893iD2L1to1DpR';
+
+  const stream = new Readable();
+  stream.push(fileBuffer);
+  stream.push(null);
+
+  const fileMetadata = {
+    name: fileName,
+    parents: [folderId]
+  };
+
+  const media = {
+    mimeType: mimeType,
+    body: stream
+  };
+
+  try {
+    const file = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: 'id, webViewLink'
+    });
+
+    // Make public
+    await drive.permissions.create({
+      fileId: file.data.id,
+      requestBody: { role: 'reader', type: 'anyone' }
+    });
+
+    return `https://drive.google.com/thumbnail?id=${file.data.id}&sz=w1200`;
+  } catch (error) {
+    console.error('Error uploading to Drive:', error.message);
+    throw new Error('No se pudo subir la imagen a Google Drive.');
+  }
+}
+
+/**
  * Maps a nombre_categoria from the DB to one of the EcoCategory values
  * used by the frontend (organic_food | sustainable_fashion | recycling | renewable_energy | other).
  */
@@ -329,7 +388,7 @@ app.get('/api/enterprises', async (req, res) => {
       else if (category === 'sustainable_fashion') catNames = ['moda', 'textil', 'tejido', 'ropa', 'fashion'];
       else if (category === 'recycling') catNames = ['recicl', '2da vida', 'cartón', 'carton', 'residuo'];
       else if (category === 'renewable_energy') catNames = ['energí', 'energia', 'solar', 'transporte ecológ', 'renovable'];
-      
+
       if (catNames.length > 0) {
         const catClauses = catNames.map(name => {
           params.push(`%${name}%`);
@@ -467,14 +526,14 @@ app.get('/api/products', async (req, res) => {
       LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
     `;
     const params = [];
-    
+
     if (ecoservice_id) {
       sql += ` WHERE p.id_ecoservice = $1`;
       params.push(ecoservice_id);
     }
-    
+
     sql += ` ORDER BY p.id_producto DESC`;
-    
+
     const result = await pool.query(sql, params);
     res.json({ success: true, data: result.rows, count: result.rows.length });
   } catch (err) {
@@ -503,6 +562,37 @@ app.get('/api/products/:id', async (req, res) => {
   } catch (err) {
     console.error('[GET /api/products/:id] Error:', err.message);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/products — create a new product (handles image upload)
+app.post('/api/products', upload.single('image'), async (req, res) => {
+  try {
+    const { name, description, price, categoryId, ecoServiceId } = req.body;
+
+    if (!name || !price || !categoryId || !ecoServiceId) {
+      return res.status(400).json({ success: false, error: 'Faltan campos requeridos' });
+    }
+
+    let imageUrl = '';
+    if (req.file) {
+      imageUrl = await uploadToDrive(req.file.buffer, req.file.originalname || 'product.jpg', req.file.mimetype);
+    } else {
+      imageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80';
+    }
+
+    const sql = `
+      INSERT INTO productos (nombre_producto, descripcion_producto, precio, foto_producto_url, disponible, id_ecoservice, id_categoria)
+      VALUES ($1, $2, $3, $4, true, $5, $6)
+      RETURNING *
+    `;
+    const params = [name, description || '', price, imageUrl, ecoServiceId, categoryId];
+
+    const result = await pool.query(sql, params);
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('[POST /api/products] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
