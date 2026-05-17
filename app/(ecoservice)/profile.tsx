@@ -104,10 +104,7 @@ export default function EcoServiceProfileScreen() {
 
         {/* User card */}
         <View className="card mb-4">
-          <Text className="text-white font-semi text-lg">{user?.name ?? 'EcoService'}</Text>
-          {user?.email ? (
-            <Text className="text-gray-400 text-sm mt-1">{user.email}</Text>
-          ) : null}
+          <Text className="text-white font-semi text-lg">{user?.email ?? 'EcoService'}</Text>
           <View className="mt-2">
             <Text className="badge-eco self-start">EcoService</Text>
           </View>
