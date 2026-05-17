@@ -7,7 +7,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { queryClient } from '@/lib/queryClient';
+import { COLORS } from '@/constants';
 
 // Prevent auto-hide until fonts are ready
 SplashScreen.preventAutoHideAsync();
@@ -43,24 +45,28 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Root index — handles auth/role redirect logic */}
-          <Stack.Screen name="index" />
-          {/* Enterprise detail — full-screen, no tab bar */}
-          <Stack.Screen name="enterprise/[id]" options={{ animation: 'slide_from_right' }} />
-          {/* Customer tab group */}
-          <Stack.Screen name="(customer)" />
-          {/* EcoService tab group */}
-          <Stack.Screen name="(ecoservice)" />
-          {/* Auth group — unauthenticated routes */}
-          <Stack.Screen name="(auth)" />
-          {/* EcoService registration wizard — full-screen modal */}
-          <Stack.Screen name="ecoservice-registration" options={{ animation: 'slide_from_bottom' }} />
-        </Stack>
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.surface }}>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar style="light" />
+          <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.surface }}>
+            <Stack screenOptions={{ headerShown: false }}>
+              {/* Root index — handles auth/role redirect logic */}
+              <Stack.Screen name="index" />
+              {/* Enterprise detail — full-screen, no tab bar */}
+              <Stack.Screen name="enterprise/[id]" options={{ animation: 'slide_from_right' }} />
+              {/* Customer tab group */}
+              <Stack.Screen name="(customer)" />
+              {/* EcoService tab group */}
+              <Stack.Screen name="(ecoservice)" />
+              {/* Auth group — unauthenticated routes */}
+              <Stack.Screen name="(auth)" />
+              {/* EcoService registration wizard — full-screen modal */}
+              <Stack.Screen name="ecoservice-registration" options={{ animation: 'slide_from_bottom' }} />
+            </Stack>
+          </SafeAreaView>
+        </QueryClientProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
