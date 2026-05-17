@@ -26,7 +26,7 @@ export function ImpactServiceCard({ enterprise, onPress }: Props) {
 
   const handlePress = () => {
     onPress?.();
-    router.push(`/enterprise/${enterprise.id}`);
+    router.push({ pathname: '/enterprise/[id]', params: { id: enterprise.id } });
   };
 
   return (

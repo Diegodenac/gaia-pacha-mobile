@@ -78,6 +78,8 @@ export interface Product {
   imageUrls: string[];
   ecoServiceId: string;
   category: EcoCategory;
+  categoryName?: string;
+  enterpriseName?: string;
   stockQuantity: number;
   isAvailable: boolean;
   sustainabilityScore?: number; // 0-100

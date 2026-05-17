@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { enterprisesRepository } from '@/repositories/enterprises.repository';
+import { useQuery, type InfiniteData } from '@tanstack/react-query';
+import { enterprisesRepository, type PaginatedEnterprises } from '@/repositories/enterprises.repository';
 import { queryClient } from '@/lib/queryClient';
 import type { GreenEnterprise } from '@/features/customer/home/mockData';
 
@@ -12,22 +12,25 @@ import type { GreenEnterprise } from '@/features/customer/home/mockData';
  */
 export function useEnterpriseDetailQuery(id: string) {
   return useQuery({
-    queryKey:    ['enterprise', id],
-    queryFn:     () => enterprisesRepository.getById(id),
-    staleTime:   1000 * 60 * 5,
-    retry:       1,
-    enabled:     !!id,
+    queryKey: ['enterprise', id],
+    queryFn: () => enterprisesRepository.getById(id),
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+    enabled: !!id,
     // Seed data from the list cache for instant navigation
     initialData: () => {
-      const allQueries = queryClient.getQueriesData<GreenEnterprise[]>({ queryKey: ['enterprises'] });
+      const allQueries = queryClient.getQueriesData<InfiniteData<PaginatedEnterprises>>({ queryKey: ['enterprises'] });
       for (const [, data] of allQueries) {
-        const found = data?.find((e) => e.id === id);
-        if (found) return found;
+        if (!data?.pages) continue;
+        for (const page of data.pages) {
+          const found = page.enterprises?.find((e) => e.id === id);
+          if (found) return found;
+        }
       }
       return undefined;
     },
     initialDataUpdatedAt: () => {
-      const state = queryClient.getQueryState<GreenEnterprise[]>(['enterprises', {}]);
+      const state = queryClient.getQueryState<InfiniteData<PaginatedEnterprises>>(['enterprises', {}]);
       return state?.dataUpdatedAt;
     },
   });

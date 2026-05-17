@@ -20,7 +20,20 @@ export function useCatalogQuery(filters: CatalogFilters = {}) {
     queryKey:  QUERY_KEYS.catalog(filters as Record<string, unknown>),
     queryFn:   () => catalogRepository.getProducts(filters),
     staleTime: CACHE_TIMES.MEDIUM,
-    // Deduplicate parallel calls to the same filter set (automatic via TanStack Query)
-    placeholderData: (prev) => prev, // keeps old data while refetching (UX: no loading flash)
+    placeholderData: (prev) => prev,
+  });
+}
+
+/**
+ * Hook: useProductQuery
+ *
+ * Fetches a single product by ID.
+ */
+export function useProductQuery(id: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.productDetail(id),
+    queryFn: () => catalogRepository.getProductById(id),
+    staleTime: CACHE_TIMES.MEDIUM,
+    enabled: !!id,
   });
 }

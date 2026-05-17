@@ -326,6 +326,29 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+// GET /api/products/:id — get a single product by id
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const sql = `
+      SELECT p.*, e.nombre_emprendimiento, c.nombre_categoria
+      FROM productos p
+      LEFT JOIN ecoservices e ON p.id_ecoservice = e.id_ecoservice
+      LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+      WHERE p.id_producto = $1
+    `;
+    const result = await pool.query(sql, [req.params.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Product not found' });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error('[GET /api/products/:id] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

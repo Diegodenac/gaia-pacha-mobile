@@ -35,13 +35,13 @@ export default function CustomerLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown:     false,
-        tabBarActiveTintColor:   COLORS.primary,
+        headerShown: false,
+        tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#6b7280',
         tabBarStyle: {
           backgroundColor: COLORS.raised,
-          borderTopColor:  COLORS.border,
-          borderTopWidth:  1,
+          borderTopColor: COLORS.border,
+          borderTopWidth: 1,
           height: 60,
           paddingBottom: 8,
         },
@@ -55,7 +55,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Inicio',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -64,7 +64,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="catalog"
         options={{
-          title: 'Catalog',
+          title: 'Catálogo',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search-outline" size={size} color={color} />
           ),
@@ -73,7 +73,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="map"
         options={{
-          title: 'Map',
+          title: 'Mapa',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
           ),
@@ -82,7 +82,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="orders"
         options={{
-          title: 'Orders',
+          title: 'Pedidos',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="receipt-outline" size={size} color={color} />
           ),
@@ -91,10 +91,16 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="producto/[id]"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

@@ -1,5 +1,8 @@
+import axios from 'axios';
 import { apiClient } from '@/lib/apiClient';
 import type { Product, PaginatedResponse, EcoCategory } from '@/types';
+
+const BACKEND_URL = 'https://gaia-pacha-backend.onrender.com';
 
 // ─── Catalog Filters ──────────────────────────────────────────────────────────
 export interface CatalogFilters {
@@ -13,31 +16,53 @@ export interface CatalogFilters {
 }
 
 // ─── Catalog Repository ───────────────────────────────────────────────────────
-/**
- * Catalog Repository — product and EcoService discovery endpoints.
- *
- * Used by: Customer feature only.
- * AI Hint: All filter combinations produce unique cache keys via QUERY_KEYS.catalog(filters).
- */
+function mapProduct(row: any): Product {
+  return {
+    id: String(row.id_producto),
+    name: row.nombre_producto,
+    description: row.descripcion_producto,
+    price: parseFloat(row.precio || '0'),
+    currency: 'Bs.',
+    imageUrls: [row.foto_producto_url].filter(Boolean),
+    ecoServiceId: String(row.id_ecoservice),
+    category: 'other', // Placeholder
+    categoryName: row.nombre_categoria,
+    enterpriseName: row.nombre_emprendimiento,
+    stockQuantity: 10,
+    isAvailable: row.disponible,
+    tags: [],
+    createdAt: row.fecha_creacion || new Date().toISOString(),
+  };
+}
+
 export const catalogRepository = {
   /**
-   * GET /catalog/products
-   * Returns paginated product listings with optional filters.
+   * GET /api/products
+   * Returns product listings. Backend currently returns a flat list.
    */
   getProducts: async (filters: CatalogFilters = {}): Promise<PaginatedResponse<Product>> => {
-    const response = await apiClient.get<{ data: PaginatedResponse<Product> }>(
-      '/catalog/products',
+    const response = await axios.get<{ data: any[], count: number }>(
+      `${BACKEND_URL}/api/products`,
       { params: filters },
     );
-    return response.data.data;
+    const products = response.data.data.map(mapProduct);
+    return {
+      data: products,
+      total: response.data.count,
+      page: 1,
+      perPage: response.data.count,
+      hasMore: false,
+    };
   },
 
   /**
-   * GET /catalog/products/:id
+   * GET /api/products/:id (Polyfill locally by filtering all)
    */
   getProductById: async (id: string): Promise<Product> => {
-    const response = await apiClient.get<{ data: Product }>(`/catalog/products/${id}`);
-    return response.data.data;
+    const response = await axios.get<{ data: any[] }>(`${BACKEND_URL}/api/products`);
+    const row = response.data.data.find((p: any) => String(p.id_producto) === id);
+    if (!row) throw new Error('Producto no encontrado');
+    return mapProduct(row);
   },
 
   /**
