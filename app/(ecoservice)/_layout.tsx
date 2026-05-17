@@ -1,5 +1,6 @@
 import { Tabs, Redirect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { useDevStore } from '@/store/devStore';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants';
 
@@ -7,35 +8,35 @@ import { COLORS } from '@/constants';
  * EcoService Tab Group Layout
  *
  * Tabs:
- *  - index     → Dashboard / Analytics Overview
- *  - inventory → Product & Service Inventory Management
- *  - orders    → Incoming Orders Management
- *  - insights  → Sales Metrics & Eco Impact Reports
- *  - profile   → EcoService Profile & Settings
+ *  - index      → Home (dashboard overview)
+ *  - explore    → Explore (marketplace browse)
+ *  - profile    → Profile & business settings
+ *  - pdp-editor → PDP Editor (product detail page builder)
+ *  - products   → Products (inventory management)
  *
- * Performance: lazy={true} — non-active tabs load on first visit.
- *
- * AI Hint: This group is completely independent from (customer).
- * Develop EcoService features here without touching customer files.
+ * Access: real EcoService users OR dev preview toggle from Customer Profile.
+ * Hidden routes (inventory, orders, insights) kept as files, href: null.
  */
 export default function EcoServiceLayout() {
   const { isAuthenticated, user } = useAuthStore();
+  const { previewAsEcoService } = useDevStore();
 
-  // Auth guard — redirect if not logged in or wrong role
-  if (!isAuthenticated || user?.role !== 'ecoservice') {
+  const isAllowed = (isAuthenticated && user?.role === 'ecoservice') || previewAsEcoService;
+
+  if (!isAllowed) {
     return <Redirect href="/(auth)/login" />;
   }
 
   return (
     <Tabs
       screenOptions={{
-        headerShown:     false,
-        tabBarActiveTintColor:   COLORS.primary,
+        headerShown: false,
+        tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#6b7280',
         tabBarStyle: {
           backgroundColor: COLORS.raised,
-          borderTopColor:  COLORS.border,
-          borderTopWidth:  1,
+          borderTopColor: COLORS.border,
+          borderTopWidth: 1,
           height: 60,
           paddingBottom: 8,
         },
@@ -49,36 +50,18 @@ export default function EcoServiceLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="inventory"
+        name="explore"
         options={{
-          title: 'Inventory',
+          title: 'Explore',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cube-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="orders"
-        options={{
-          title: 'Orders',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="insights"
-        options={{
-          title: 'Insights',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" size={size} color={color} />
+            <Ionicons name="compass-outline" size={size} color={color} />
           ),
         }}
       />
@@ -91,6 +74,29 @@ export default function EcoServiceLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="pdp-editor"
+        options={{
+          title: 'PDP Editor',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="create-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="products"
+        options={{
+          title: 'Products',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cube-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Hidden routes — kept as files but not shown in tab bar */}
+      <Tabs.Screen name="inventory" options={{ href: null }} />
+      <Tabs.Screen name="orders"    options={{ href: null }} />
+      <Tabs.Screen name="insights"  options={{ href: null }} />
     </Tabs>
   );
 }
