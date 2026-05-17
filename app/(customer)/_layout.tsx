@@ -38,7 +38,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Inicio',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -47,7 +47,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="catalog"
         options={{
-          title: 'Explore',
+          title: 'Catálogo',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="compass-outline" size={size} color={color} />
           ),
@@ -56,7 +56,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
@@ -64,8 +64,8 @@ export default function CustomerLayout() {
       />
 
       {/* Hidden routes — accessible via Link/router.push but not shown in tab bar */}
-      <Tabs.Screen name="map"          options={{ href: null }} />
-      <Tabs.Screen name="orders"       options={{ href: null }} />
+      <Tabs.Screen name="map" options={{ href: null }} />
+      <Tabs.Screen name="orders" options={{ href: null }} />
       <Tabs.Screen name="producto/[id]" options={{ href: null }} />
     </Tabs>
   );

@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import React from 'react'
 import {
   View,
   Text,
@@ -21,6 +22,66 @@ const { width } = Dimensions.get('window');
 const CARD_MARGIN = 8;
 const CARD_WIDTH = (width - 40 - CARD_MARGIN) / 2; // 20px padding on sides, 8px gap
 
+interface CatalogHeaderProps {
+  searchInput: string;
+  onSearchChange: (v: string) => void;
+  categories: string[];
+  activeCategory: string;
+  onCategoryPress: (cat: string) => void;
+}
+
+const CatalogHeader = React.memo(function CatalogHeader({
+  searchInput,
+  onSearchChange,
+  categories,
+  activeCategory,
+  onCategoryPress,
+}: CatalogHeaderProps) {
+  return (
+    <View style={s.headerContainer}>
+      <Text style={s.pageTitle}>Catálogo de Productos</Text>
+      <View style={s.searchWrap}>
+        <View style={s.searchBox}>
+          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Buscar productos, emprendimientos..."
+            placeholderTextColor="#9CA3AF"
+            value={searchInput}
+            onChangeText={onSearchChange}
+            returnKeyType="search"
+          />
+          {searchInput.length > 0 && (
+            <Pressable onPress={() => onSearchChange('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </Pressable>
+          )}
+        </View>
+      </View>
+      <FlatList
+        horizontal
+        data={categories}
+        keyExtractor={(item) => item}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.chips}
+        renderItem={({ item: cat }) => {
+          const active = activeCategory === cat;
+          return (
+            <Pressable
+              onPress={() => onCategoryPress(cat)}
+              style={[s.chip, active && s.chipActive]}
+            >
+              <Text style={[s.chipText, active && s.chipTextActive]}>
+                {cat === 'all' ? 'Todos' : cat}
+              </Text>
+            </Pressable>
+          );
+        }}
+      />
+    </View>
+  );
+});
+
 export default function CatalogScreen() {
   const [searchInput, setSearchInput] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -38,60 +99,12 @@ export default function CatalogScreen() {
   // Filter products by search and category locally (since backend search for products isn't fully set up yet)
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchInput.toLowerCase()) || 
-                            (p.enterpriseName && p.enterpriseName.toLowerCase().includes(searchInput.toLowerCase()));
+      const matchesSearch = p.name.toLowerCase().includes(searchInput.toLowerCase()) ||
+        (p.enterpriseName && p.enterpriseName.toLowerCase().includes(searchInput.toLowerCase()));
       const matchesCategory = activeCategory === 'all' || p.categoryName === activeCategory;
       return matchesSearch && matchesCategory;
     });
   }, [products, searchInput, activeCategory]);
-
-  const renderHeader = () => (
-    <View style={s.headerContainer}>
-      <Text style={s.pageTitle}>Catálogo de Productos</Text>
-
-      {/* SEARCH */}
-      <View style={s.searchWrap}>
-        <View style={s.searchBox}>
-          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
-          <TextInput
-            style={s.searchInput}
-            placeholder="Buscar productos, emprendimientos..."
-            placeholderTextColor="#9CA3AF"
-            value={searchInput}
-            onChangeText={setSearchInput}
-            returnKeyType="search"
-          />
-          {searchInput.length > 0 && (
-            <Pressable onPress={() => setSearchInput('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </Pressable>
-          )}
-        </View>
-      </View>
-
-      {/* CATEGORY CHIPS */}
-      <FlatList
-        horizontal
-        data={categories}
-        keyExtractor={(item) => item}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.chips}
-        renderItem={({ item: cat }) => {
-          const active = activeCategory === cat;
-          return (
-            <Pressable
-              onPress={() => setActiveCategory(cat)}
-              style={[s.chip, active && s.chipActive]}
-            >
-              <Text style={[s.chipText, active && s.chipTextActive]}>
-                {cat === 'all' ? 'Todos' : cat}
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
-    </View>
-  );
 
   const renderProduct = ({ item }: { item: Product }) => (
     <Link href={{ pathname: '/(customer)/producto/[id]', params: { id: item.id } }} asChild>
@@ -142,7 +155,15 @@ export default function CatalogScreen() {
         numColumns={2}
         columnWrapperStyle={s.columnWrapper}
         contentContainerStyle={s.listContent}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={
+          <CatalogHeader
+            searchInput={searchInput}
+            onSearchChange={setSearchInput}
+            categories={categories}
+            activeCategory={activeCategory}
+            onCategoryPress={setActiveCategory}
+          />
+        }
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
       />

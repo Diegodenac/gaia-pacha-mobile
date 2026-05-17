@@ -50,7 +50,7 @@ export default function EcoServiceLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Inicio',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -59,7 +59,7 @@ export default function EcoServiceLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: 'Catálogo',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="compass-outline" size={size} color={color} />
           ),
@@ -68,7 +68,7 @@ export default function EcoServiceLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
@@ -77,7 +77,7 @@ export default function EcoServiceLayout() {
       <Tabs.Screen
         name="pdp-editor"
         options={{
-          title: 'PDP Editor',
+          title: 'Editor',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="storefront-outline" size={size} color={color} />
           ),
@@ -86,7 +86,7 @@ export default function EcoServiceLayout() {
       <Tabs.Screen
         name="products"
         options={{
-          title: 'Products',
+          title: 'Productos',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cube-outline" size={size} color={color} />
           ),
@@ -95,8 +95,8 @@ export default function EcoServiceLayout() {
 
       {/* Hidden routes — kept as files but not shown in tab bar */}
       <Tabs.Screen name="inventory" options={{ href: null }} />
-      <Tabs.Screen name="orders"    options={{ href: null }} />
-      <Tabs.Screen name="insights"  options={{ href: null }} />
+      <Tabs.Screen name="orders" options={{ href: null }} />
+      <Tabs.Screen name="insights" options={{ href: null }} />
     </Tabs>
   );
 }

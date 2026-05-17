@@ -14,26 +14,19 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ImpactServiceCard } from '@molecules/ImpactServiceCard';
 import { useEnterprisesQuery } from '@/features/customer/home/hooks/useEnterprisesQuery';
-import { useCategoriesQuery } from '@/features/customer/home/hooks/useCategoriesQuery';
-import { useDebounce } from '@/lib/useDebounce';
 
 const LOGO_URI =
   'https://gaiapacha.org/wp-content/uploads/2023/07/Portada-FGP-1-1024x341.png';
 
 const IMPACT_STATS = [
-  { icon: 'business-outline' as const, value: '5+',  label: 'Empresas\nverdes' },
-  { icon: 'leaf-outline' as const,     value: '12T', label: 'CO₂\nevitado' },
-  { icon: 'people-outline' as const,   value: '3',   label: 'Comunidades\nimpactadas' },
+  { icon: 'business-outline' as const, value: '50+', label: 'Empresas\nverdes' },
+  { icon: 'leaf-outline' as const, value: '12T', label: 'CO₂\nevitado' },
+  { icon: 'people-outline' as const, value: '15', label: 'Comunidades\nimpactadas' },
 ];
-
-const ALL_CHIP = { id: null as number | null, name: 'Todas' };
 
 export default function CustomerHomeScreen() {
   const [searchInput, setSearchInput] = useState('');
-  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
-
-  // Debounce the search input so we don't fire a DB query on every keystroke.
-  const debouncedSearch = useDebounce(searchInput, 300);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
 
   const {
     enterprises,
@@ -44,39 +37,41 @@ export default function CustomerHomeScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useEnterprisesQuery({ search: debouncedSearch, categoryId: activeCategoryId });
+  } = useEnterprisesQuery();
 
-  const { data: categories = [] } = useCategoriesQuery();
-  const chips = useMemo(() => [ALL_CHIP, ...categories], [categories]);
+  const categories = useMemo(() => {
+    const cats = new Set(enterprises.map((e) => e.categoryLabel).filter(Boolean));
+    return ['all', ...Array.from(cats)] as string[];
+  }, [enterprises]);
 
-  const activeChipLabel =
-    activeCategoryId === null
-      ? 'Todas las empresas'
-      : categories.find((c) => c.id === activeCategoryId)?.name ?? 'Empresas';
+  const filteredEnterprises = useMemo(() => {
+    return enterprises.filter((e) => {
+      const matchesSearch =
+        e.name.toLowerCase().includes(searchInput.toLowerCase()) ||
+        (e.description && e.description.toLowerCase().includes(searchInput.toLowerCase()));
+      const matchesCategory = activeCategory === 'all' || e.categoryLabel === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [enterprises, searchInput, activeCategory]);
 
   return (
     <View style={s.root}>
       <StatusBar barStyle="light-content" backgroundColor="#064E3B" />
       <FlatList
-        data={enterprises}
+        data={filteredEnterprises}
         keyExtractor={(item, index) => item.id || index.toString()}
         renderItem={({ item }) => <ImpactServiceCard enterprise={item} />}
         contentContainerStyle={[s.scroll, { paddingHorizontal: 20 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
-          // IMPORTANT: pass an element (not a function) so the TextInput inside
-          // never remounts on parent re-renders. Functions passed here are
-          // treated as component types, and a new arrow on every render causes
-          // the search input to lose focus on every keystroke.
           <HomeHeader
             searchInput={searchInput}
             onSearchChange={setSearchInput}
-            chips={chips}
-            activeCategoryId={activeCategoryId}
-            onCategoryPress={setActiveCategoryId}
-            activeChipLabel={activeChipLabel}
-            resultsCount={enterprises.length}
+            categories={categories}
+            activeCategory={activeCategory}
+            onCategoryPress={setActiveCategory}
+            resultsCount={filteredEnterprises.length}
             isFetching={isFetching}
             isFromBackend={isFromBackend}
             isError={isError}
@@ -117,10 +112,9 @@ export default function CustomerHomeScreen() {
 interface HomeHeaderProps {
   searchInput: string;
   onSearchChange: (v: string) => void;
-  chips: Array<{ id: number | null; name: string }>;
-  activeCategoryId: number | null;
-  onCategoryPress: (id: number | null) => void;
-  activeChipLabel: string;
+  categories: string[];
+  activeCategory: string;
+  onCategoryPress: (category: string) => void;
   resultsCount: number;
   isFetching: boolean;
   isFromBackend: boolean;
@@ -130,17 +124,16 @@ interface HomeHeaderProps {
 const HomeHeader = React.memo(function HomeHeader({
   searchInput,
   onSearchChange,
-  chips,
-  activeCategoryId,
+  categories,
+  activeCategory,
   onCategoryPress,
-  activeChipLabel,
   resultsCount,
   isFetching,
   isFromBackend,
   isError,
 }: HomeHeaderProps) {
   return (
-    <>
+    <View>
       {/* ── HERO ──────────────────────────────────────────────── */}
       <View style={s.hero}>
         <View style={s.ring1} />
@@ -205,43 +198,44 @@ const HomeHeader = React.memo(function HomeHeader({
         </View>
       </View>
 
-      {/* ── CATEGORY CHIPS (dynamic from /api/categories) ─────── */}
+      {/* ── CHIPS ─────────────────────────────────────────────── */}
       <FlatList
         horizontal
-        data={chips}
-        keyExtractor={(item) => String(item.id ?? 'all')}
+        data={categories}
+        keyExtractor={(item) => item}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={s.chips}
-        renderItem={({ item: cat }) => {
-          const active = activeCategoryId === cat.id;
+        renderItem={({ item: catName }) => {
+          const active = activeCategory === catName;
+          const label = catName === 'all' ? 'Todas' : catName;
           return (
             <Pressable
-              onPress={() => onCategoryPress(cat.id)}
+              onPress={() => onCategoryPress(catName)}
               style={[s.chip, active && s.chipActive]}
             >
               <Text style={[s.chipText, active && s.chipTextActive]}>
-                {cat.name}
+                {label}
               </Text>
             </Pressable>
           );
         }}
       />
 
-      {/* ── RESULTS HEADER ───────────────────────────────────────────── */}
-      <View style={s.results}>
+      {/* ── RESULTS ───────────────────────────────────────────── */}
+      {/*<View style={s.results}>
         <View style={s.resultsHeader}>
-          <Text style={s.resultsTitle}>{activeChipLabel}</Text>
           <View style={s.resultsRight}>
             {isFetching && (
-              <ActivityIndicator size="small" color="#059669" style={{ marginRight: 8 }} />
+              <ActivityIndicator
+                size="small"
+                color="#059669"
+                style={{ marginRight: 8 }}
+              />
             )}
-            <View style={s.countBadge}>
-              <Text style={s.countText}>{resultsCount}</Text>
-            </View>
           </View>
         </View>
 
-        <View style={[s.sourceBadge, isFromBackend ? s.sourceLive : s.sourceMock]}>
+         <View style={[s.sourceBadge, isFromBackend ? s.sourceLive : s.sourceMock]}>
           <Ionicons
             name={isFromBackend ? 'cloud-done-outline' : 'server-outline'}
             size={11}
@@ -251,12 +245,12 @@ const HomeHeader = React.memo(function HomeHeader({
             {isFromBackend
               ? 'Datos en vivo · DB Aiven'
               : isError
-              ? 'Sin conexión al backend'
-              : 'Cargando datos...'}
+                ? 'Sin conexión al backend'
+                : 'Cargando datos...'}
           </Text>
-        </View>
-      </View>
-    </>
+        </View> 
+      </View>*/}
+    </View>
   );
 });
 
