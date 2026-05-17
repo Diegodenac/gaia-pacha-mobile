@@ -1,7 +1,6 @@
 import { useQuery, type InfiniteData } from '@tanstack/react-query';
 import { enterprisesRepository, type PaginatedEnterprises } from '@/repositories/enterprises.repository';
 import { queryClient } from '@/lib/queryClient';
-import type { GreenEnterprise } from '@/features/customer/home/mockData';
 
 /**
  * Hook: useEnterpriseDetailQuery

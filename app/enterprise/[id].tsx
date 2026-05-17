@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEnterpriseDetailQuery } from '@/features/customer/home/hooks/useEnterpriseDetailQuery';
-import { MOCK_PRODUCTS } from '@/features/customer/home/mockData';
+import { useProductsQuery } from '@/features/customer/home/hooks/useProductsQuery';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -86,6 +86,7 @@ export default function EnterpriseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { data: enterprise, isLoading } = useEnterpriseDetailQuery(id ?? '');
+  const { data: products = [], isLoading: isLoadingProducts } = useProductsQuery(id ?? '');
 
   const cat = enterprise
     ? (CATEGORY_STYLES[enterprise.category] ?? CATEGORY_STYLES['other'])
@@ -283,41 +284,52 @@ export default function EnterpriseDetailScreen() {
           </>
         ) : null}
 
-        {/* ── PRODUCT CATALOG (mocked) ─────────────────────────────────── */}
+        {/* ── PRODUCT CATALOG ──────────────────────────────────────────── */}
         <View style={s.divider} />
         <View style={s.section}>
-          <View style={s.sectionHeaderRow}>
-            <Text style={s.sectionTitle}>🛍️ Catálogo de Productos</Text>
-            <View style={s.demoBadge}>
-              <Text style={s.demoBadgeText}>Demo</Text>
+          <Text style={s.sectionTitle}>🛍️ Catálogo de Productos</Text>
+
+          {isLoadingProducts ? (
+            <View style={s.productsLoading}>
+              <ActivityIndicator size="small" color="#059669" />
+              <Text style={s.productsLoadingText}>Cargando productos...</Text>
             </View>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.productsScroll}
-          >
-            {MOCK_PRODUCTS.map((product) => (
-              <Pressable key={product.id} style={s.productCard}>
-                <Image
-                  source={{ uri: product.imageUrl }}
-                  style={s.productImage}
-                  contentFit="cover"
-                  transition={300}
-                />
-                {product.badge ? (
-                  <View style={s.productBadge}>
-                    <Text style={s.productBadgeText}>{product.badge}</Text>
+          ) : products.length === 0 ? (
+            <View style={s.productsEmpty}>
+              <Ionicons name="cube-outline" size={36} color="#D1FAE5" />
+              <Text style={s.productsEmptyText}>Sin productos registrados aún</Text>
+            </View>
+          ) : (
+            <View style={s.productsList}>
+              {products.map((product) => (
+                <View key={product.id} style={s.productRow}>
+                  <View style={s.productImageWrap}>
+                    <Image
+                      source={{ uri: product.imageUrl }}
+                      style={s.productImage}
+                      contentFit="cover"
+                      transition={300}
+                    />
+                    {!product.available && (
+                      <View style={s.unavailableOverlay}>
+                        <Text style={s.unavailableText}>Agotado</Text>
+                      </View>
+                    )}
                   </View>
-                ) : null}
-                <View style={s.productBody}>
-                  <Text style={s.productName} numberOfLines={1}>{product.name}</Text>
-                  <Text style={s.productDesc} numberOfLines={1}>{product.description}</Text>
-                  <Text style={s.productPrice}>{product.price}</Text>
+                  <View style={s.productInfo}>
+                    <View style={s.productCategoryTag}>
+                      <Text style={s.productCategoryText} numberOfLines={1}>
+                        {product.categoryName}
+                      </Text>
+                    </View>
+                    <Text style={s.productName} numberOfLines={2}>{product.name}</Text>
+                    <Text style={s.productDesc} numberOfLines={2}>{product.description}</Text>
+                    <Text style={s.productPrice}>Bs. {parseFloat(product.price).toFixed(2)}</Text>
+                  </View>
                 </View>
-              </Pressable>
-            ))}
-          </ScrollView>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* ── LOCATION / MAP ───────────────────────────────────────────── */}
@@ -652,72 +664,107 @@ const s = StyleSheet.create({
   },
 
   // ── Product Catalog ───────────────────────────────────────────────────────
-  demoBadge: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#FCD34D',
+  productsLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 24,
   },
-  demoBadgeText: {
-    fontSize: 11,
-    color: '#92400E',
-    fontWeight: '700',
+  productsLoadingText: {
+    fontSize: 14,
+    color: '#059669',
   },
-  productsScroll: {
-    gap: 12,
-    paddingRight: 4,
-  },
-  productCard: {
-    width: 152,
-    backgroundColor: '#fff',
+  productsEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 32,
+    backgroundColor: '#F0FDF4',
     borderRadius: 14,
-    shadowColor: '#064E3B',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+    borderStyle: 'dashed',
+  },
+  productsEmptyText: {
+    fontSize: 14,
+    color: '#6EE7B7',
+    fontWeight: '600',
+  },
+  productsList: {
+    gap: 12,
+  },
+  productRow: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#064E3B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  productImageWrap: {
+    width: 110,
+    height: 110,
+    position: 'relative',
   },
   productImage: {
-    width: '100%',
-    height: 112,
+    width: 110,
+    height: 110,
   },
-  productBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#064E3B',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+  unavailableOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  productBadgeText: {
-    color: '#6EE7B7',
+  unavailableText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  productInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  productCategoryTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  productCategoryText: {
     fontSize: 10,
+    color: '#065F46',
     fontWeight: '700',
-  },
-  productBody: {
-    padding: 10,
-    gap: 2,
   },
   productName: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: '#111827',
+    lineHeight: 19,
   },
   productDesc: {
-    fontSize: 11,
-    color: '#9CA3AF',
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 17,
+    marginTop: 2,
   },
   productPrice: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#064E3B',
-    marginTop: 4,
+    marginTop: 6,
   },
 
   // ── Location ──────────────────────────────────────────────────────────────
