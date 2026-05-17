@@ -180,7 +180,7 @@ const s = StyleSheet.create({
   headerContainer: { paddingTop: 16, paddingBottom: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 },
   pageTitle: { fontSize: 24, fontWeight: '800', color: '#064E3B' },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#9CA3AF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#059669', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   addBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   searchWrap: { paddingHorizontal: 20, marginBottom: 12 },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, shadowColor: '#064E3B', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 3 },

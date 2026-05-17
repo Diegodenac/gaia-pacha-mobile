@@ -12,8 +12,6 @@ import {
   ScrollView,
   Alert
 } from 'react-native';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { inventoryRepository } from '@/repositories/inventory.repository';
 import { useQueryClient } from '@tanstack/react-query';
@@ -34,7 +32,7 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingCats, setIsLoadingCats] = useState(false);
@@ -53,7 +51,7 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
     setDescription('');
     setPrice('');
     setCategoryId(null);
-    setImageUri(null);
+    setImageUri('');
     setIsSubmitting(false);
   };
 
@@ -71,28 +69,9 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
     }
   };
 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permiso denegado', 'Necesitamos permisos para acceder a tus fotos.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0].uri) {
-      setImageUri(result.assets[0].uri);
-    }
-  };
-
   const handleSubmit = async () => {
     if (!name || !price || !categoryId || !imageUri) {
-      Alert.alert('Faltan datos', 'Por favor llena todos los campos y selecciona una imagen.');
+      Alert.alert('Faltan datos', 'Por favor llena todos los campos y coloca una URL para la imagen.');
       return;
     }
 
@@ -137,16 +116,18 @@ export function AddProductModal({ visible, onClose, ecoServiceId }: Props) {
 
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
           
-          <Pressable style={s.imagePicker} onPress={pickImage} disabled={isSubmitting}>
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} style={s.imagePreview} contentFit="cover" />
-            ) : (
-              <View style={s.imagePlaceholder}>
-                <Ionicons name="image-outline" size={40} color="#9CA3AF" />
-                <Text style={s.imagePlaceholderText}>Toca para seleccionar imagen</Text>
-              </View>
-            )}
-          </Pressable>
+          <View style={s.inputGroup}>
+            <Text style={s.label}>URL de la Imagen <Text style={s.req}>*</Text></Text>
+            <TextInput
+              style={s.input}
+              value={imageUri}
+              onChangeText={setImageUri}
+              placeholder="Ej. https://misitio.com/imagen.jpg"
+              editable={!isSubmitting}
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+          </View>
 
           <View style={s.inputGroup}>
             <Text style={s.label}>Nombre del producto <Text style={s.req}>*</Text></Text>
@@ -242,20 +223,6 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
   scroll: { flex: 1 },
   content: { padding: 20, gap: 20, paddingBottom: 40 },
-  
-  imagePicker: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
-  },
-  imagePreview: { width: '100%', height: '100%' },
-  imagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  imagePlaceholderText: { color: '#6B7280', fontSize: 14, fontWeight: '500' },
 
   inputGroup: { gap: 8 },
   label: { fontSize: 14, fontWeight: '600', color: '#374151' },

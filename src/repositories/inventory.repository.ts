@@ -28,23 +28,20 @@ export const inventoryRepository = {
     formData.append('ecoServiceId', data.ecoServiceId.toString());
 
     if (data.imageUri) {
-      const filename = data.imageUri.split('/').pop() || 'product.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image`;
-
-      formData.append('image', {
-        uri: data.imageUri,
-        name: filename,
-        type,
-      } as any);
+      formData.append('image', data.imageUri);
     }
 
-    const response = await apiClient.post(`${BACKEND_URL}/api/products`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const response = await fetch(`${BACKEND_URL}/api/products`, {
+      method: 'POST',
+      body: formData as any,
+      // Do not manually set Content-Type header; fetch will automatically generate the multipart boundary string
     });
 
-    return response.data;
+    if (!response.ok) {
+      throw new Error(`Error en la subida: ${response.statusText}`);
+    }
+
+    const result: any = await response.json();
+    return result.data;
   }
 };

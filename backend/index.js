@@ -424,6 +424,8 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
     let imageUrl = '';
     if (req.file) {
       imageUrl = await uploadToDrive(req.file.buffer, req.file.originalname || 'product.jpg', req.file.mimetype);
+    } else if (req.body.image) {
+      imageUrl = req.body.image;
     } else {
       imageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80';
     }
