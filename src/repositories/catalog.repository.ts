@@ -14,6 +14,7 @@ export interface CatalogFilters {
   minPrice?:     number;
   maxPrice?:     number;
   ecoServiceId?: string;
+  id_customer?:  number; // <--- NUEVO: Para que TypeScript acepte el ID del algoritmo
 }
 
 // ─── Catalog Repository ───────────────────────────────────────────────────────
