@@ -528,16 +528,27 @@ app.post('/api/enterprises', authMiddleware, async (req, res) => {
       req.user.id,
     ];
 
-    const result = await pool.query(sql, params);
-    const created = result.rows[0];
+    const client = await pool.connect();
+    let created;
+    try {
+      await client.query('BEGIN');
+      const result = await client.query(sql, params);
+      created = result.rows[0];
 
-    // Elevate user role so the next login returns role:'ecoservice'
-    await pool.query(
-      `UPDATE usuarios SET tipo_usuario = 'ecoservice' WHERE id_usuarios = $1`,
-      [req.user.id],
-    );
+      // Elevate user role so the next login returns role:'ecoservice'
+      await client.query(
+        `UPDATE usuarios SET tipo_usuario = 'ecoservice' WHERE email = $1`,
+        [req.user.email],
+      );
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
 
-    console.log(`[POST /api/enterprises] id=${created.id_ecoservice} user=${req.user.id}`);
+    console.log(`[POST /api/enterprises] id=${created.id_ecoservice} user=${req.user.email}`);
     res.status(201).json({ success: true, data: mapEnterprise(created) });
   } catch (err) {
     console.error('[POST /api/enterprises] Error:', err.message);
