@@ -149,10 +149,14 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'gaia-pacha-backend' });
 });
 
-// GET /api/enterprises — list with optional ?category=&search= filters
+// GET /api/enterprises — list with optional ?category=&search=&page=&limit= filters
 app.get('/api/enterprises', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, category } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
     const params = [];
     const clauses = [];
 
@@ -162,33 +166,94 @@ app.get('/api/enterprises', async (req, res) => {
       clauses.push(`(LOWER(e.nombre_emprendimiento) LIKE $${n} OR LOWER(e.descripcion_detallada) LIKE $${n})`);
     }
 
+    if (category && category !== 'all') {
+      let catNames = [];
+      if (category === 'organic_food') catNames = ['aliment', 'bebida', 'orgán', 'organic'];
+      else if (category === 'sustainable_fashion') catNames = ['moda', 'textil', 'tejido', 'ropa', 'fashion'];
+      else if (category === 'recycling') catNames = ['recicl', '2da vida', 'cartón', 'carton', 'residuo'];
+      else if (category === 'renewable_energy') catNames = ['energí', 'energia', 'solar', 'transporte ecológ', 'renovable'];
+      
+      if (catNames.length > 0) {
+        const catClauses = catNames.map(name => {
+          params.push(`%${name}%`);
+          return `LOWER(c.nombre_categoria) LIKE $${params.length}`;
+        });
+        clauses.push(`(${catClauses.join(' OR ')})`);
+      }
+    }
+
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
-    // Join with categorias via studio_contenido (best available link);
-    // if that's empty we still get all ecoservices with null category.
+    const joins = `
+      LEFT JOIN LATERAL (
+        SELECT id_categoria FROM studio_contenido WHERE id_ecoservice = e.id_ecoservice
+        UNION
+        SELECT id_categoria FROM productos WHERE id_ecoservice = e.id_ecoservice
+        LIMIT 1
+      ) sc_link ON true
+      LEFT JOIN categorias c ON c.id_categoria = sc_link.id_categoria
+    `;
+
+    // 1. Get total count for pagination metadata
+    const countSql = `SELECT COUNT(*) FROM ecoservices e ${joins} ${where}`;
+    const countResult = await pool.query(countSql, params);
+    const totalCount = parseInt(countResult.rows[0].count);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // 2. Add LIMIT and OFFSET params
+    params.push(limit, offset);
+    const limitIdx = params.length - 1;
+    const offsetIdx = params.length;
+
     const sql = `
       SELECT
         e.*,
-        c.nombre_categoria
+        c.id_categoria,
+        c.nombre_categoria,
+        (
+          SELECT COALESCE(
+            json_agg(
+              json_build_object(
+                'id', p.id_producto,
+                'name', p.nombre_producto,
+                'description', p.descripcion_producto,
+                'price', p.precio,
+                'imageUrl', p.foto_producto_url,
+                'available', p.disponible
+              )
+            ),
+            '[]'
+          )
+          FROM productos p
+          WHERE p.id_ecoservice = e.id_ecoservice
+        ) as productos_json
       FROM ecoservices e
       LEFT JOIN LATERAL (
-        SELECT sc.id_categoria
-        FROM studio_contenido sc
-        WHERE sc.id_ecoservice = e.id_ecoservice
+        SELECT id_categoria FROM studio_contenido WHERE id_ecoservice = e.id_ecoservice
+        UNION
+        SELECT id_categoria FROM productos WHERE id_ecoservice = e.id_ecoservice
         LIMIT 1
       ) sc_link ON true
       LEFT JOIN categorias c ON c.id_categoria = sc_link.id_categoria
       ${where}
       ORDER BY e.id_ecoservice
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `;
 
     const result = await pool.query(sql, params);
-    console.log(`[GET /api/enterprises] rows=${result.rows.length}`);
+    console.log(`[GET /api/enterprises] page=${page} rows=${result.rows.length}`);
 
     res.json({
       success: true,
       data: result.rows.map(mapEnterprise),
       count: result.rows.length,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasMore: page < totalPages
+      }
     });
   } catch (err) {
     console.error('[GET /api/enterprises] Error:', err.message);

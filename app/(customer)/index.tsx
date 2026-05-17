@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
-  ScrollView,
+  FlatList,
   TextInput,
   Pressable,
   Text,
@@ -27,174 +27,200 @@ const IMPACT_STATS = [
 ];
 
 export default function CustomerHomeScreen() {
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | EcoCategory>('all');
 
-  const { enterprises, isLoading, isError, isFromBackend } = useEnterprisesQuery();
+  // Debounce search input to avoid hitting the DB on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-  const filtered = useMemo(() => {
-    let result = enterprises;
-    if (activeCategory !== 'all') {
-      result = result.filter((e) => e.category === activeCategory);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (e) =>
-          e.name.toLowerCase().includes(q) ||
-          e.description.toLowerCase().includes(q) ||
-          e.keywords.some((k) => k.toLowerCase().includes(q)),
-      );
-    }
-    return result;
-  }, [enterprises, search, activeCategory]);
+  const { 
+    enterprises, 
+    isLoading, 
+    isError, 
+    isFromBackend,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage 
+  } = useEnterprisesQuery({ search: debouncedSearch, category: activeCategory });
+
+  const renderHeader = () => (
+    <>
+      {/* ── HERO ──────────────────────────────────────────────── */}
+      <View style={s.hero}>
+        {/* Decorative nature rings */}
+        <View style={s.ring1} />
+        <View style={s.ring2} />
+        <View style={s.ring3} />
+        <View style={s.ring4} />
+
+        <SafeAreaView edges={['top']} style={s.heroContent}>
+          {/* Gaia Pacha logo — featured card with green glow */}
+          <View style={s.logoCardOuter}>
+            <View style={s.logoCard}>
+              <Image
+                source={{ uri: LOGO_URI }}
+                style={s.logoImg}
+                contentFit="contain"
+                transition={500}
+              />
+            </View>
+          </View>
+
+          {/* Tagline */}
+          <Text style={s.tagline}>
+            Conectando soluciones verdes{'\n'}con quienes las necesitan
+          </Text>
+
+          {/* Accent divider */}
+          <View style={s.heroDivider} />
+
+          {/* Impact stats */}
+          <View style={s.statsRow}>
+            {IMPACT_STATS.map((stat, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <View style={s.statSep} />}
+                <View style={s.statItem}>
+                  <Ionicons name={stat.icon} size={20} color="#6EE7B7" />
+                  <Text style={s.statValue}>{stat.value}</Text>
+                  <Text style={s.statLabel}>{stat.label}</Text>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+        </SafeAreaView>
+
+        {/* Rounded wave — transition to content background */}
+        <View style={s.heroWave} />
+      </View>
+
+      {/* ── SEARCH ────────────────────────────────────────────── */}
+      <View style={s.searchWrap}>
+        <View style={s.searchBox}>
+          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Buscar emprendimientos verdes..."
+            placeholderTextColor="#9CA3AF"
+            value={searchInput}
+            onChangeText={setSearchInput}
+            returnKeyType="search"
+          />
+          {searchInput.length > 0 && (
+            <Pressable onPress={() => setSearchInput('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      {/* ── CATEGORY CHIPS ────────────────────────────────────── */}
+      <FlatList
+        horizontal
+        data={HOME_CATEGORIES}
+        keyExtractor={(item) => item.id}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.chips}
+        renderItem={({ item: cat }) => {
+          const active = activeCategory === cat.id;
+          return (
+            <Pressable
+              onPress={() => setActiveCategory(cat.id as 'all' | EcoCategory)}
+              style={[s.chip, active && s.chipActive]}
+            >
+              <Text style={[s.chipText, active && s.chipTextActive]}>
+                {cat.label}
+              </Text>
+            </Pressable>
+          );
+        }}
+      />
+
+      {/* ── RESULTS HEADER ───────────────────────────────────────────── */}
+      <View style={s.results}>
+        <View style={s.resultsHeader}>
+          <Text style={s.resultsTitle}>
+            {activeCategory === 'all'
+              ? 'Todas las empresas'
+              : HOME_CATEGORIES.find((c) => c.id === activeCategory)?.label ?? 'Empresas'}
+          </Text>
+          <View style={s.resultsRight}>
+            {isLoading && (
+              <ActivityIndicator size="small" color="#059669" style={{ marginRight: 8 }} />
+            )}
+            <View style={s.countBadge}>
+              <Text style={s.countText}>{enterprises.length}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Data source indicator */}
+        <View style={[s.sourceBadge, isFromBackend ? s.sourceLive : s.sourceMock]}>
+          <Ionicons
+            name={isFromBackend ? 'cloud-done-outline' : 'server-outline'}
+            size={11}
+            color={isFromBackend ? '#059669' : '#9CA3AF'}
+          />
+          <Text style={[s.sourceText, isFromBackend ? s.sourceTextLive : s.sourceTextMock]}>
+            {isFromBackend
+              ? 'Datos en vivo · DB Aiven'
+              : isError
+              ? 'Sin conexión al backend · Datos de ejemplo'
+              : 'Cargando datos...'}
+          </Text>
+        </View>
+      </View>
+    </>
+  );
+
+  const renderEmpty = () => {
+    if (isLoading) return null;
+    return (
+      <View style={s.empty}>
+        <View style={s.emptyIcon}>
+          <Ionicons name="leaf-outline" size={40} color="#6EE7B7" />
+        </View>
+        <Text style={s.emptyTitle}>Sin resultados</Text>
+        <Text style={s.emptySubtitle}>
+          Intenta con otra categoría o palabra clave
+        </Text>
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#059669" />
+      </View>
+    );
+  };
 
   return (
     <View style={s.root}>
       <StatusBar barStyle="light-content" backgroundColor="#064E3B" />
-      <ScrollView
+      <FlatList
+        data={enterprises}
+        keyExtractor={(item, index) => item.id || index.toString()}
+        renderItem={({ item }) => <ImpactServiceCard enterprise={item} />}
+        contentContainerStyle={[s.scroll, { paddingHorizontal: 20 }]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.scroll}
-      >
-        {/* ── HERO ──────────────────────────────────────────────── */}
-        <View style={s.hero}>
-          {/* Decorative nature rings */}
-          <View style={s.ring1} />
-          <View style={s.ring2} />
-          <View style={s.ring3} />
-          <View style={s.ring4} />
-
-          <SafeAreaView edges={['top']} style={s.heroContent}>
-            {/* Gaia Pacha logo — featured card with green glow */}
-            <View style={s.logoCardOuter}>
-              <View style={s.logoCard}>
-                <Image
-                  source={{ uri: LOGO_URI }}
-                  style={s.logoImg}
-                  contentFit="contain"
-                  transition={500}
-                />
-              </View>
-            </View>
-
-            {/* Tagline */}
-            <Text style={s.tagline}>
-              Conectando soluciones verdes{'\n'}con quienes las necesitan
-            </Text>
-
-            {/* Accent divider */}
-            <View style={s.heroDivider} />
-
-            {/* Impact stats */}
-            <View style={s.statsRow}>
-              {IMPACT_STATS.map((stat, i) => (
-                <React.Fragment key={i}>
-                  {i > 0 && <View style={s.statSep} />}
-                  <View style={s.statItem}>
-                    <Ionicons name={stat.icon} size={20} color="#6EE7B7" />
-                    <Text style={s.statValue}>{stat.value}</Text>
-                    <Text style={s.statLabel}>{stat.label}</Text>
-                  </View>
-                </React.Fragment>
-              ))}
-            </View>
-          </SafeAreaView>
-
-          {/* Rounded wave — transition to content background */}
-          <View style={s.heroWave} />
-        </View>
-
-        {/* ── SEARCH ────────────────────────────────────────────── */}
-        <View style={s.searchWrap}>
-          <View style={s.searchBox}>
-            <Ionicons name="search-outline" size={18} color="#9CA3AF" />
-            <TextInput
-              style={s.searchInput}
-              placeholder="Buscar emprendimientos verdes..."
-              placeholderTextColor="#9CA3AF"
-              value={search}
-              onChangeText={setSearch}
-              returnKeyType="search"
-            />
-            {search.length > 0 && (
-              <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        {/* ── CATEGORY CHIPS ────────────────────────────────────── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.chips}
-        >
-          {HOME_CATEGORIES.map((cat) => {
-            const active = activeCategory === cat.id;
-            return (
-              <Pressable
-                key={cat.id}
-                onPress={() => setActiveCategory(cat.id as 'all' | EcoCategory)}
-                style={[s.chip, active && s.chipActive]}
-              >
-                <Text style={[s.chipText, active && s.chipTextActive]}>
-                  {cat.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* ── RESULTS ───────────────────────────────────────────── */}
-        <View style={s.results}>
-          <View style={s.resultsHeader}>
-            <Text style={s.resultsTitle}>
-              {activeCategory === 'all'
-                ? 'Todas las empresas'
-                : HOME_CATEGORIES.find((c) => c.id === activeCategory)?.label ?? 'Empresas'}
-            </Text>
-            <View style={s.resultsRight}>
-              {isLoading && (
-                <ActivityIndicator size="small" color="#059669" style={{ marginRight: 8 }} />
-              )}
-              <View style={s.countBadge}>
-                <Text style={s.countText}>{filtered.length}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Data source indicator */}
-          <View style={[s.sourceBadge, isFromBackend ? s.sourceLive : s.sourceMock]}>
-            <Ionicons
-              name={isFromBackend ? 'cloud-done-outline' : 'server-outline'}
-              size={11}
-              color={isFromBackend ? '#059669' : '#9CA3AF'}
-            />
-            <Text style={[s.sourceText, isFromBackend ? s.sourceTextLive : s.sourceTextMock]}>
-              {isFromBackend
-                ? 'Datos en vivo · DB Aiven'
-                : isError
-                ? 'Sin conexión al backend · Datos de ejemplo'
-                : 'Cargando datos...'}
-            </Text>
-          </View>
-
-          {filtered.length > 0 ? (
-            filtered.map((e) => <ImpactServiceCard key={e.id} enterprise={e} />)
-          ) : (
-            <View style={s.empty}>
-              <View style={s.emptyIcon}>
-                <Ionicons name="leaf-outline" size={40} color="#6EE7B7" />
-              </View>
-              <Text style={s.emptyTitle}>Sin resultados</Text>
-              <Text style={s.emptySubtitle}>
-                Intenta con otra categoría o palabra clave
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+      />
     </View>
   );
 }

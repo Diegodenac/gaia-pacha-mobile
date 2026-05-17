@@ -34,29 +34,47 @@ function enrichWithMockFallback(
 export interface EnterprisesFilters {
   category?: 'all' | EcoCategory;
   search?: string;
+  page?: number;
+  limit?: number;
 }
 
-interface BackendResponse {
+export interface BackendResponse {
   success: boolean;
   data: GreenEnterprise[];
+  pagination?: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
   table?: string;
   count?: number;
   error?: string;
 }
 
+export interface PaginatedEnterprises {
+  enterprises: GreenEnterprise[];
+  nextPage: number | null;
+}
+
 export const enterprisesRepository = {
   /**
-   * Fetches all enterprises from the local backend.
+   * Fetches paginated enterprises from the backend.
    * Enriches missing visual fields from mock data so cards always look complete.
    */
-  getAll: async (filters: EnterprisesFilters = {}): Promise<GreenEnterprise[]> => {
-    const params: Record<string, string> = {};
+  getAll: async (filters: EnterprisesFilters = {}): Promise<PaginatedEnterprises> => {
+    const params: Record<string, string | number> = {};
     if (filters.category && filters.category !== 'all') {
       params.category = filters.category;
     }
     if (filters.search?.trim()) {
       params.search = filters.search.trim();
     }
+    
+    // Pagination params
+    params.page = filters.page || 1;
+    params.limit = filters.limit || 10;
 
     const response = await axios.get<BackendResponse>(
       `${BACKEND_URL}/api/enterprises`,
@@ -67,9 +85,17 @@ export const enterprisesRepository = {
       throw new Error(response.data.error ?? 'Invalid response from backend');
     }
 
-    return response.data.data.map((enterprise, i) =>
+    const enterprises = response.data.data.map((enterprise, i) =>
       enrichWithMockFallback(enterprise, i),
     );
+
+    const hasMore = response.data.pagination?.hasMore ?? false;
+    const nextPage = hasMore ? (filters.page || 1) + 1 : null;
+
+    return {
+      enterprises,
+      nextPage,
+    };
   },
 
   /**
