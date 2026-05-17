@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
-const { Pool }  = require('pg');
-const cors      = require('cors');
+const { Pool } = require('pg');
+const cors = require('cors');
 
 const app = express();
 app.use(cors());
@@ -65,8 +65,8 @@ function parseLocation(tipoUbicacion, linkMaps) {
     const lower = tipoUbicacion.toLowerCase();
     if (lower.includes('virtual') || lower.includes('negocio virtual')) return 'Negocio Virtual';
     if (lower.includes('punto de entrega')) return 'Punto de Entrega · Bolivia';
-    if (lower.includes('punto de venta'))   return 'Punto de Venta · Bolivia';
-    if (lower.includes('mi casa'))          return 'Entrega a Domicilio · Bolivia';
+    if (lower.includes('punto de venta')) return 'Punto de Venta · Bolivia';
+    if (lower.includes('mi casa')) return 'Entrega a Domicilio · Bolivia';
   }
   if (linkMaps && !linkMaps.startsWith('http')) {
     // It's a text description, not an actual link — use first 35 chars
@@ -80,8 +80,8 @@ function parseLocation(tipoUbicacion, linkMaps) {
  */
 function buildImpactSummary(row) {
   if (row.resuelve_problematica_ambiental) return row.resuelve_problematica_ambiental;
-  if (row.actividades_sostenibles)          return row.actividades_sostenibles;
-  if (row.descripcion_detallada)             return row.descripcion_detallada.substring(0, 120);
+  if (row.actividades_sostenibles) return row.actividades_sostenibles;
+  if (row.descripcion_detallada) return row.descripcion_detallada.substring(0, 120);
   return '';
 }
 
@@ -95,7 +95,7 @@ function buildGreenSignals(row) {
     signals.push({ label: 'En el mercado', value: row.tiempo_mercado });
   }
   if (row.reduce_empaques) {
-    const val = ['si','sí','yes','true'].includes(row.reduce_empaques.toLowerCase()) ? 'Sí' : row.reduce_empaques;
+    const val = ['si', 'sí', 'yes', 'true'].includes(row.reduce_empaques.toLowerCase()) ? 'Sí' : row.reduce_empaques;
     signals.push({ label: 'Reduce empaques', value: val });
   }
   if (row.horario_atencion) {
@@ -128,23 +128,18 @@ function buildImpactBadges(row) {
  */
 function mapEnterprise(row) {
   return {
-    id:            String(row.id_ecoservice ?? ''),
-    name:          (row.nombre_emprendimiento ?? '').trim(),
-    description:   (row.descripcion_detallada ?? '').trim(),
-    category:      mapCategory(row.nombre_categoria),
+    id: String(row.id_ecoservice ?? ''),
+    name: (row.nombre_emprendimiento ?? '').trim(),
+    description: (row.descripcion_detallada ?? '').trim(),
+    category: mapCategory(row.nombre_categoria),
     categoryLabel: row.nombre_categoria ?? 'Eco Emprendimiento',
-    imageUrl:      convertDriveUrl(row.foto_principal_url ?? ''),
-    logoUrl:       '',  // no logo column in DB — frontend will use mock fallback
-    location:      parseLocation(row.tipo_ubicacion, row.link_google_maps),
+    imageUrl: convertDriveUrl(row.foto_principal_url ?? ''),
+    logoUrl: '',  // no logo column in DB — frontend will use mock fallback
+    location: parseLocation(row.tipo_ubicacion, row.link_google_maps),
     impactSummary: buildImpactSummary(row),
-    greenSignals:  buildGreenSignals(row),
-    impactBadges:  buildImpactBadges(row),
-    keywords:      [],
-    products:      row.productos_json || [],
-    categoryObject: {
-      id: String(row.id_categoria || 'other'),
-      name: row.nombre_categoria || 'Eco Emprendimiento'
-    }
+    greenSignals: buildGreenSignals(row),
+    impactBadges: buildImpactBadges(row),
+    keywords: [],
   };
 }
 
@@ -158,7 +153,7 @@ app.get('/health', (_req, res) => {
 app.get('/api/enterprises', async (req, res) => {
   try {
     const { search } = req.query;
-    const params  = [];
+    const params = [];
     const clauses = [];
 
     if (search) {
@@ -174,30 +169,12 @@ app.get('/api/enterprises', async (req, res) => {
     const sql = `
       SELECT
         e.*,
-        c.id_categoria,
-        c.nombre_categoria,
-        (
-          SELECT COALESCE(
-            json_agg(
-              json_build_object(
-                'id', p.id_producto,
-                'name', p.nombre_producto,
-                'description', p.descripcion_producto,
-                'price', p.precio,
-                'imageUrl', p.foto_producto_url,
-                'available', p.disponible
-              )
-            ),
-            '[]'
-          )
-          FROM productos p
-          WHERE p.id_ecoservice = e.id_ecoservice
-        ) as productos_json
+        c.nombre_categoria
       FROM ecoservices e
       LEFT JOIN LATERAL (
-        SELECT id_categoria FROM studio_contenido WHERE id_ecoservice = e.id_ecoservice
-        UNION
-        SELECT id_categoria FROM productos WHERE id_ecoservice = e.id_ecoservice
+        SELECT sc.id_categoria
+        FROM studio_contenido sc
+        WHERE sc.id_ecoservice = e.id_ecoservice
         LIMIT 1
       ) sc_link ON true
       LEFT JOIN categorias c ON c.id_categoria = sc_link.id_categoria
@@ -210,8 +187,8 @@ app.get('/api/enterprises', async (req, res) => {
 
     res.json({
       success: true,
-      data:    result.rows.map(mapEnterprise),
-      count:   result.rows.length,
+      data: result.rows.map(mapEnterprise),
+      count: result.rows.length,
     });
   } catch (err) {
     console.error('[GET /api/enterprises] Error:', err.message);
@@ -223,33 +200,11 @@ app.get('/api/enterprises', async (req, res) => {
 app.get('/api/enterprises/:id', async (req, res) => {
   try {
     const sql = `
-      SELECT
-        e.*,
-        c.id_categoria,
-        c.nombre_categoria,
-        (
-          SELECT COALESCE(
-            json_agg(
-              json_build_object(
-                'id', p.id_producto,
-                'name', p.nombre_producto,
-                'description', p.descripcion_producto,
-                'price', p.precio,
-                'imageUrl', p.foto_producto_url,
-                'available', p.disponible
-              )
-            ),
-            '[]'
-          )
-          FROM productos p
-          WHERE p.id_ecoservice = e.id_ecoservice
-        ) as productos_json
+      SELECT e.*, c.nombre_categoria
       FROM ecoservices e
       LEFT JOIN LATERAL (
-        SELECT id_categoria FROM studio_contenido WHERE id_ecoservice = e.id_ecoservice
-        UNION
-        SELECT id_categoria FROM productos WHERE id_ecoservice = e.id_ecoservice
-        LIMIT 1
+        SELECT sc.id_categoria FROM studio_contenido sc
+        WHERE sc.id_ecoservice = e.id_ecoservice LIMIT 1
       ) sc_link ON true
       LEFT JOIN categorias c ON c.id_categoria = sc_link.id_categoria
       WHERE e.id_ecoservice = $1
@@ -263,6 +218,45 @@ app.get('/api/enterprises/:id', async (req, res) => {
     res.json({ success: true, data: mapEnterprise(result.rows[0]) });
   } catch (err) {
     console.error('[GET /api/enterprises/:id] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/categories
+app.get('/api/categories', async (req, res) => {
+  try {
+    const sql = `SELECT * FROM categorias ORDER BY nombre_categoria ASC`;
+    const result = await pool.query(sql);
+    res.json({ success: true, data: result.rows, count: result.rows.length });
+  } catch (err) {
+    console.error('[GET /api/categories] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/products — list products (with optional filtering by ?ecoservice_id=)
+app.get('/api/products', async (req, res) => {
+  try {
+    const { ecoservice_id } = req.query;
+    let sql = `
+      SELECT p.*, e.nombre_emprendimiento, c.nombre_categoria
+      FROM productos p
+      LEFT JOIN ecoservices e ON p.id_ecoservice = e.id_ecoservice
+      LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+    `;
+    const params = [];
+    
+    if (ecoservice_id) {
+      sql += ` WHERE p.id_ecoservice = $1`;
+      params.push(ecoservice_id);
+    }
+    
+    sql += ` ORDER BY p.id_producto DESC`;
+    
+    const result = await pool.query(sql, params);
+    res.json({ success: true, data: result.rows, count: result.rows.length });
+  } catch (err) {
+    console.error('[GET /api/products] Error:', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
