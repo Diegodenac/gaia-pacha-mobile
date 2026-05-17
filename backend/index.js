@@ -364,11 +364,25 @@ app.get('/api/products', async (req, res) => {
   try {
     const { ecoservice_id, id_customer } = req.query;
 
-    // CASO A: MAGIA DEL MOTOR (Si enviamos id_customer)
-    if (id_customer) {
+    // 1. Buscamos el ID del cliente de forma dinámica
+    let customerId = id_customer;
+
+    // Si el frontend no mandó el id por la URL, lo descubrimos abriendo el Token de autenticación
+    const header = req.headers.authorization ?? '';
+    if (!customerId && header.startsWith('Bearer ')) {
       try {
-        console.log(`[GET /api/products] Generando feed personalizado para id_customer: ${id_customer}`);
-        const response = await axios.get(`https://motor-recomendaciones-api.onrender.com/api/recomendaciones/productos/${id_customer}`);
+        const decoded = jwt.verify(header.slice(7), JWT_SECRET);
+        customerId = decoded.id; // <-- ¡Aquí atrapa el ID del usuario que inició sesión!
+      } catch (tokenErr) {
+        console.log('[GET /api/products] Token enviado no es válido, se procesará como invitado');
+      }
+    }
+
+    // CASO A: MAGIA DEL MOTOR (Si hay un usuario identificado, ya sea por URL o por Token)
+    if (customerId) {
+      try {
+        console.log(`[GET /api/products] Generando feed personalizado para id_customer: ${customerId}`);
+        const response = await axios.get(`https://motor-recomendaciones-api.onrender.com/api/recomendaciones/productos/${customerId}`);
         const { productos_ids } = response.data;
 
         if (productos_ids && productos_ids.length > 0) {
@@ -382,7 +396,6 @@ app.get('/api/products', async (req, res) => {
           `;
           const resultDb = await pool.query(sqlPersonalizado, productos_ids);
 
-          // Reordenamos para mantener la aleatoriedad que envió el motor
           const productosOrdenados = productos_ids
             .map(id => resultDb.rows.find(row => parseInt(row.id_producto) === id))
             .filter(Boolean);
@@ -391,7 +404,7 @@ app.get('/api/products', async (req, res) => {
             success: true, 
             data: productosOrdenados, 
             count: productosOrdenados.length,
-            source: 'motor-recomendaciones'
+            source: `motor-recomendaciones-para-usuario-${customerId}`
           });
         }
       } catch (motorError) {
@@ -399,7 +412,7 @@ app.get('/api/products', async (req, res) => {
       }
     }
 
-    // CASO B: FLUJO TRADICIONAL
+    // CASO B: FLUJO TRADICIONAL (Para usuarios no logueados / invitados)
     let sql = `
       SELECT p.*, e.nombre_emprendimiento, c.nombre_categoria
       FROM productos p
@@ -416,7 +429,7 @@ app.get('/api/products', async (req, res) => {
     sql += ` ORDER BY p.id_producto DESC`;
 
     const result = await pool.query(sql, params);
-    res.json({ success: true, data: result.rows, count: result.rows.length, source: 'tradicional' });
+    res.json({ success: true, data: result.rows, count: result.rows.length, source: 'tradicional-invitado' });
   } catch (err) {
     console.error('[GET /api/products] Error:', err.message);
     res.status(500).json({ success: false, error: err.message });
