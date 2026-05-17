@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import {
   View, Text, Switch, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator,
@@ -9,9 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useAuthStore } from '@/store/authStore';
 import { useDevStore } from '@/store/devStore';
-import { useEcoServiceStore } from '@/store/ecoServiceStore';
-import { useEcoServiceListQuery } from '@/features/ecoservice/switcher/hooks/useEcoServiceListQuery';
-import { useEnterpriseDetailQuery } from '@/features/customer/home/hooks/useEnterpriseDetailQuery';
+import { useMyEcoServiceQuery } from '@/features/ecoservice/profile/hooks/useMyEcoServiceQuery';
 import { useMyProductsQuery } from '@/features/ecoservice/products/hooks/useMyProductsQuery';
 import type { Product } from '@/types';
 
@@ -33,24 +30,10 @@ const ECO_TEAL       = '#34d399';
 export default function EcoServiceProfileScreen() {
   const { user, logout } = useAuthStore();
   const { previewAsEcoService, togglePreview } = useDevStore();
-  const { activeEcoServiceId, setActiveEcoServiceId } = useEcoServiceStore();
   const router = useRouter();
 
-  // Fetch enterprise list only to resolve the active enterprise ID
-  const { data: enterprises } = useEcoServiceListQuery();
-
-  useEffect(() => {
-    if (!activeEcoServiceId && enterprises?.length) {
-      setActiveEcoServiceId(enterprises[0].id);
-    }
-  }, [enterprises, activeEcoServiceId, setActiveEcoServiceId]);
-
-  const { data: enterprise, isLoading: loadingEnterprise } = useEnterpriseDetailQuery(
-    activeEcoServiceId ?? '',
-  );
-  const { myProducts, isLoading: loadingProducts } = useMyProductsQuery(
-    activeEcoServiceId ?? '',
-  );
+  const { data: enterprise, isLoading: loadingEnterprise } = useMyEcoServiceQuery();
+  const { myProducts, isLoading: loadingProducts } = useMyProductsQuery(enterprise?.id ?? '');
 
   function handlePreviewToggle(value: boolean) {
     togglePreview();

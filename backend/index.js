@@ -324,6 +324,33 @@ app.get('/api/enterprises', async (req, res) => {
   }
 });
 
+// GET /api/enterprises/me — returns the ecoservice owned by the authenticated user
+app.get('/api/enterprises/me', authMiddleware, async (req, res) => {
+  try {
+    const sql = `
+      SELECT e.*, c.nombre_categoria
+      FROM ecoservices e
+      LEFT JOIN LATERAL (
+        SELECT sc.id_categoria FROM studio_contenido sc
+        WHERE sc.id_ecoservice = e.id_ecoservice LIMIT 1
+      ) sc_link ON true
+      LEFT JOIN categorias c ON c.id_categoria = sc_link.id_categoria
+      WHERE e.id_usuario = $1
+      LIMIT 1
+    `;
+    const result = await pool.query(sql, [req.user.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'No tienes un emprendimiento registrado' });
+    }
+
+    res.json({ success: true, data: mapEnterprise(result.rows[0]) });
+  } catch (err) {
+    console.error('[GET /api/enterprises/me] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/enterprises/:id
 app.get('/api/enterprises/:id', async (req, res) => {
   try {

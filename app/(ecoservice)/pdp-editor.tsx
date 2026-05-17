@@ -12,9 +12,8 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuthStore } from '@/store/authStore';
-import { useEnterpriseDetailQuery } from '@/features/customer/home/hooks/useEnterpriseDetailQuery';
-import { MOCK_PRODUCTS } from '@/features/customer/home/mockData';
+import { useMyEcoServiceQuery } from '@/features/ecoservice/profile/hooks/useMyEcoServiceQuery';
+import { useMyProductsQuery } from '@/features/ecoservice/products/hooks/useMyProductsQuery';
 
 // ── Helpers (identical to enterprise/[id].tsx) ────────────────────────────────
 
@@ -53,9 +52,9 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; emoji: string 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function PdpEditorScreen() {
-  const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
-  const { data: enterprise, isLoading } = useEnterpriseDetailQuery(user?.id ?? '');
+  const { data: enterprise, isLoading } = useMyEcoServiceQuery();
+  const { myProducts } = useMyProductsQuery(enterprise?.id ?? '');
 
   const cat = enterprise
     ? (CATEGORY_STYLES[enterprise.category] ?? CATEGORY_STYLES['other'])
@@ -247,36 +246,37 @@ export default function PdpEditorScreen() {
         ) : null}
 
         {/* ── PRODUCT CATALOG ───────────────────────────────────── */}
-        <View style={s.divider} />
-        <View style={s.section}>
-          <View style={s.sectionHeaderRow}>
-            <Text style={s.sectionTitle}>🛍️ Catálogo de Productos</Text>
-            <View style={s.demoBadge}>
-              <Text style={s.demoBadgeText}>Demo</Text>
+        {myProducts.length > 0 ? (
+          <>
+            <View style={s.divider} />
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>🛍️ Catálogo de Productos</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.productsScroll}
+              >
+                {myProducts.map((product) => (
+                  <Pressable key={product.id} style={s.productCard}>
+                    <Image
+                      source={{ uri: product.imageUrls[0] || 'https://via.placeholder.com/150' }}
+                      style={s.productImage}
+                      contentFit="cover"
+                      transition={300}
+                    />
+                    <View style={s.productBody}>
+                      <Text style={s.productName} numberOfLines={1}>{product.name}</Text>
+                      {product.categoryName ? (
+                        <Text style={s.productDesc} numberOfLines={1}>{product.categoryName}</Text>
+                      ) : null}
+                      <Text style={s.productPrice}>{product.currency} {product.price.toFixed(2)}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
             </View>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.productsScroll}
-          >
-            {MOCK_PRODUCTS.map((product) => (
-              <Pressable key={product.id} style={s.productCard}>
-                <Image source={{ uri: product.imageUrl }} style={s.productImage} contentFit="cover" transition={300} />
-                {product.badge ? (
-                  <View style={s.productBadge}>
-                    <Text style={s.productBadgeText}>{product.badge}</Text>
-                  </View>
-                ) : null}
-                <View style={s.productBody}>
-                  <Text style={s.productName} numberOfLines={1}>{product.name}</Text>
-                  <Text style={s.productDesc} numberOfLines={1}>{product.description}</Text>
-                  <Text style={s.productPrice}>{product.price}</Text>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
+          </>
+        ) : null}
 
         {/* ── LOCATION ──────────────────────────────────────────── */}
         <View style={s.divider} />
@@ -351,7 +351,6 @@ const s = StyleSheet.create({
   divider:            { height: 8, backgroundColor: '#F0FDF4' },
   section:            { backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 20, gap: 14 },
   sectionTitle:       { fontSize: 17, fontWeight: '800', color: '#111827' },
-  sectionHeaderRow:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
   descriptionText:    { fontSize: 15, color: '#374151', lineHeight: 24 },
 
   impactBox:          { flexDirection: 'row', gap: 10, backgroundColor: '#F0FDF4', borderLeftWidth: 3, borderLeftColor: '#10B981', borderRadius: 8, padding: 14 },
@@ -374,13 +373,9 @@ const s = StyleSheet.create({
   socialIconCircle:   { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
   socialLabel:        { fontSize: 12, fontWeight: '700' },
 
-  demoBadge:          { backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1, borderColor: '#FCD34D' },
-  demoBadgeText:      { fontSize: 11, color: '#92400E', fontWeight: '700' },
   productsScroll:     { gap: 12, paddingRight: 4 },
   productCard:        { width: 152, backgroundColor: '#fff', borderRadius: 14, shadowColor: '#064E3B', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' },
   productImage:       { width: '100%', height: 112 },
-  productBadge:       { position: 'absolute', top: 8, right: 8, backgroundColor: '#064E3B', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  productBadgeText:   { color: '#6EE7B7', fontSize: 10, fontWeight: '700' },
   productBody:        { padding: 10, gap: 2 },
   productName:        { fontSize: 13, fontWeight: '700', color: '#111827' },
   productDesc:        { fontSize: 11, color: '#9CA3AF' },

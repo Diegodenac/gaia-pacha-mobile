@@ -69,6 +69,22 @@ export const enterprisesRepository = {
     return response.data;
   },
 
+  /**
+   * GET /api/enterprises/me — returns the ecoservice owned by the authenticated user.
+   * Throws when the user has no enterprise registered yet.
+   */
+  getMine: async (): Promise<GreenEnterprise> => {
+    const response = await apiClient.get<{ success: boolean; data: GreenEnterprise; error?: string }>(
+      '/api/enterprises/me',
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error ?? 'No tienes un emprendimiento registrado');
+    }
+    const enterprise = response.data.data;
+    const fallbackIdx = GREEN_ENTERPRISES.findIndex(e => e.category === enterprise.category);
+    return enrichWithMockFallback(enterprise, fallbackIdx >= 0 ? fallbackIdx : 0);
+  },
+
 
   /**
    * Fetches paginated enterprises from the backend.
