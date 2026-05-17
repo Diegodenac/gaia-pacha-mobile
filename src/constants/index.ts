@@ -1,8 +1,8 @@
 // ─── App Constants ────────────────────────────────────────────────────────────
 
-/** Base API URL — override per EAS build profile */
+/** Base API URL — override via EXPO_PUBLIC_API_URL env var or EAS build profile */
 export const API_BASE_URL: string =
-  (process.env.EXPO_PUBLIC_API_URL as string) ?? '[YOUR_API_BASE_URL]';
+  process.env.EXPO_PUBLIC_API_URL || 'https://gaia-pacha-backend.onrender.com';
 
 /** App version */
 export const APP_VERSION = '1.0.0';
