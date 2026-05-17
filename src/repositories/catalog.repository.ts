@@ -6,13 +6,14 @@ const BACKEND_URL = 'https://gaia-pacha-backend.onrender.com';
 
 // ─── Catalog Filters ──────────────────────────────────────────────────────────
 export interface CatalogFilters {
-  category?:  EcoCategory;
-  search?:    string;
-  page?:      number;
-  perPage?:   number;
-  sortBy?:    'price_asc' | 'price_desc' | 'rating' | 'newest';
-  minPrice?:  number;
-  maxPrice?:  number;
+  category?:     EcoCategory;
+  search?:       string;
+  page?:         number;
+  perPage?:      number;
+  sortBy?:       'price_asc' | 'price_desc' | 'rating' | 'newest';
+  minPrice?:     number;
+  maxPrice?:     number;
+  ecoServiceId?: string;
 }
 
 // ─── Catalog Repository ───────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The app supports two distinct user profiles — **Customer** and **EcoService** — each with its own tab bar and feature set. Navigation is handled via two Expo Router route groups: `(customer)` and `(ecoservice)`.
+The app supports two distinct user profiles — **Customer** and **EcoService** — each with its own tab bar. Navigation is handled via two Expo Router route groups: `(customer)` and `(ecoservice)`.
 
 ---
 
@@ -10,26 +10,26 @@ The app supports two distinct user profiles — **Customer** and **EcoService** 
 
 ### Customer — 3 tabs
 
-| Tab     | File                        | Screen                                       |
-|---------|-----------------------------|----------------------------------------------|
-| Home    | `app/(customer)/index.tsx`  | Enterprise discovery: hero, search, categories, listing with pagination |
-| Explore | `app/(customer)/catalog.tsx`| Product catalog: grid view, search, category chips, links to product detail |
-| Profile | `app/(customer)/profile.tsx`| User card, dev preview switch, sign out       |
+| Tab     | File                         | Screen                                                              |
+|---------|------------------------------|---------------------------------------------------------------------|
+| Home    | `app/(customer)/index.tsx`   | Enterprise discovery: hero, search, categories, paginated listing   |
+| Explore | `app/(customer)/catalog.tsx` | Product catalog: 2-col grid, search, category chips, price bubble   |
+| Profile | `app/(customer)/profile.tsx` | User card, dev EcoService preview switch, sign out                  |
 
-Hidden routes (not in tab bar, still navigable):
-- `app/(customer)/producto/[id].tsx` — product detail, opened from Explore via `Link`
+Hidden routes (not in tab bar, still navigable via `Link`):
+- `app/(customer)/producto/[id].tsx` — product detail, opened from Explore
 - `app/(customer)/map.tsx` — preserved for future use
 - `app/(customer)/orders.tsx` — preserved for future use
 
 ### EcoService — 5 tabs
 
-| Tab        | File                              | Screen                          |
-|------------|-----------------------------------|---------------------------------|
-| Home       | `app/(ecoservice)/index.tsx`      | Dashboard: KPIs, recent orders  |
-| Explore    | `app/(ecoservice)/explore.tsx`    | Marketplace browse (placeholder)|
-| Profile    | `app/(ecoservice)/profile.tsx`    | Business card, dev toggle, sign out |
-| PDP Editor | `app/(ecoservice)/pdp-editor.tsx` | Product detail page builder (placeholder) |
-| Products   | `app/(ecoservice)/products.tsx`   | Inventory management (placeholder) |
+| Tab        | File                              | Icon              | Screen                                                         |
+|------------|-----------------------------------|-------------------|----------------------------------------------------------------|
+| Home       | `app/(ecoservice)/index.tsx`      | `home-outline`    | Same as Customer Home — full enterprise discovery              |
+| Explore    | `app/(ecoservice)/explore.tsx`    | `compass-outline` | Same as Customer Explore — full product catalog grid           |
+| Profile    | `app/(ecoservice)/profile.tsx`    | `person-outline`  | User card, EcoService switcher component, dev toggle, sign out |
+| PDP Editor | `app/(ecoservice)/pdp-editor.tsx` | `storefront-outline` | Own enterprise PDP in preview-only mode                     |
+| Products   | `app/(ecoservice)/products.tsx`   | `cube-outline`    | Own products grid (filtered), Add Product CTA (UI only)        |
 
 Hidden routes:
 - `app/(ecoservice)/inventory.tsx` — preserved for future use
@@ -50,40 +50,71 @@ otherwise                                  →  /(customer)
 
 ---
 
+## EcoService Tab Detail
+
+### Home & Explore
+Both tabs replicate the Customer implementation exactly — same hooks (`useEnterprisesQuery`, `useCatalogQuery`), same layout, same data source. EcoService owners browse the full marketplace alongside customers.
+
+### Profile — EcoService Switcher
+The profile screen includes an `EcoServiceSwitcher` component that lists owned enterprises. Currently renders the active enterprise with an "Agregar otro EcoService" placeholder row (disabled). Designed to expand into a real multi-enterprise switcher when the backend supports it.
+
+### PDP Editor
+Loads the current user's enterprise via `useEnterpriseDetailQuery(user.id)`. Renders the full enterprise detail view (identical to what customers see in `app/enterprise/[id].tsx`) with these differences:
+- "Vista previa" badge overlaid on the hero image
+- WhatsApp CTA replaced by a greyed-out non-interactive version
+- No back/navigation button (it's a tab, not a stack screen)
+- Icon: `storefront-outline`
+
+### Products
+Uses the Explore grid layout (2-column `FlatList`, search bar, category chips). Data flow:
+1. `useMyProductsQuery(user.id)` calls `useCatalogQuery({ ecoServiceId: user.id })`
+2. Results are also filtered client-side by `product.ecoServiceId` for reliability
+3. Unavailable products show a "No disponible" overlay badge
+4. "Agregar" button is present but `disabled` — functionality deferred to next iteration
+
+---
+
 ## Dev Preview Switch (Profile Tab)
 
-A `Switch` in the Profile screen lets developers render the EcoService tab bar without creating an EcoService account. The state is held in `src/store/devStore.ts` (Zustand, no persistence — resets on app reload).
+A `Switch` in the Customer Profile screen allows developers to render the EcoService tab bar without a real EcoService account. State lives in `src/store/devStore.ts` (Zustand, no persistence).
 
-**Flow: Customer → EcoService preview**
-1. Customer opens Profile tab.
-2. Toggles "Preview EcoService tabs" ON.
-3. `router.replace('/(ecoservice)')` — app navigates to EcoService group.
-4. EcoService layout guard checks `previewAsEcoService === true` and allows access.
+**Customer → EcoService preview:**
+1. Toggle "Preview EcoService tabs" ON in Customer Profile.
+2. `router.replace('/(ecoservice)')` navigates to EcoService group.
+3. EcoService layout guard checks `previewAsEcoService === true`.
 
-**Flow: Exit preview**
-1. Inside EcoService Preview, open Profile tab.
-2. The switch is visible only when `previewAsEcoService` is true.
-3. Toggle OFF → `router.replace('/(customer)')` and store resets.
-
-**Store** (`src/store/devStore.ts`):
-```ts
-{ previewAsEcoService: boolean; togglePreview: () => void }
-```
-No persistence — intentional. The preview is a dev tool, not a user state.
+**Exit preview:**
+1. The switch appears in EcoService Profile only when `previewAsEcoService` is true.
+2. Toggle OFF → `router.replace('/(customer)')`.
 
 ---
 
 ## Auth Guard Summary
 
-| Route group     | Guard condition                                                     |
-|-----------------|---------------------------------------------------------------------|
-| `(customer)`    | None — always accessible                                           |
-| `(ecoservice)`  | `(isAuthenticated && role === 'ecoservice') || previewAsEcoService` |
-| `(auth)`        | Reverse guard — redirects away if already authenticated            |
+| Route group     | Guard condition                                                      |
+|-----------------|----------------------------------------------------------------------|
+| `(customer)`    | None — always accessible                                            |
+| `(ecoservice)`  | `(isAuthenticated && role === 'ecoservice') || previewAsEcoService`  |
+| `(auth)`        | Reverse guard — redirects away if already authenticated              |
+
+---
+
+## Data Layer — EcoService-specific
+
+| Hook                    | Location                                                        | Purpose                                  |
+|-------------------------|-----------------------------------------------------------------|------------------------------------------|
+| `useMyProductsQuery`    | `src/features/ecoservice/products/hooks/useMyProductsQuery.ts`  | Filtered product list for current user   |
+| `useEnterpriseDetailQuery` | `src/features/customer/home/hooks/useEnterpriseDetailQuery.ts` | Enterprise PDP data (shared)             |
+| `useCatalogQuery`       | `src/features/customer/catalog/hooks/useCatalogQuery.ts`        | Full catalog (shared by Explore tabs)    |
+| `useEnterprisesQuery`   | `src/features/customer/home/hooks/useEnterprisesQuery.ts`       | Enterprise list (shared by Home tabs)    |
+
+`CatalogFilters` in `src/repositories/catalog.repository.ts` now includes `ecoServiceId?: string` for server-side filtering support.
 
 ---
 
 ## Next Steps (out of scope here)
 
 - EcoService sign-up form (design in Claude-Designs prototype).
-- Feature implementation for EcoService Explore, PDP Editor, Products screens.
+- "Agregar Producto" functionality in Products tab.
+- Real multi-enterprise switching API in EcoService switcher.
+- PDP editing capabilities in PDP Editor tab.

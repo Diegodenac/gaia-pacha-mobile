@@ -21,12 +21,12 @@ function enrichWithMockFallback(
     ...enterprise,
     // Keep real data if present, otherwise use mock
     categoryLabel: enterprise.categoryLabel || mock.categoryLabel,
-    imageUrl:      enterprise.imageUrl      || mock.imageUrl,
-    logoUrl:       enterprise.logoUrl       || mock.logoUrl,
+    imageUrl: enterprise.imageUrl || mock.imageUrl,
+    logoUrl: enterprise.logoUrl || mock.logoUrl,
     impactSummary: enterprise.impactSummary || mock.impactSummary,
-    greenSignals:  enterprise.greenSignals?.length  ? enterprise.greenSignals  : mock.greenSignals,
-    impactBadges:  enterprise.impactBadges?.length  ? enterprise.impactBadges  : mock.impactBadges,
-    keywords:      enterprise.keywords?.length      ? enterprise.keywords      : mock.keywords,
+    greenSignals: enterprise.greenSignals?.length ? enterprise.greenSignals : mock.greenSignals,
+    impactBadges: enterprise.impactBadges?.length ? enterprise.impactBadges : mock.impactBadges,
+    keywords: enterprise.keywords?.length ? enterprise.keywords : mock.keywords,
   };
 }
 
@@ -71,7 +71,7 @@ export const enterprisesRepository = {
     if (filters.search?.trim()) {
       params.search = filters.search.trim();
     }
-    
+
     // Pagination params
     params.page = filters.page || 1;
     params.limit = filters.limit || 10;
