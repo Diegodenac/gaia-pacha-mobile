@@ -509,7 +509,7 @@ app.post('/auth/register', async (req, res) => {
     res.status(201).json({ success: true, data: { user: makeUserPayload(user), token } });
   } catch (err) {
     console.error('[POST /auth/register]', err.message);
-    res.status(500).json({ success: false, error: 'Error al crear la cuenta' });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -532,7 +532,7 @@ app.post('/auth/login', async (req, res) => {
     res.json({ success: true, data: { user: makeUserPayload(user), token } });
   } catch (err) {
     console.error('[POST /auth/login]', err.message);
-    res.status(500).json({ success: false, error: 'Error al iniciar sesión' });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

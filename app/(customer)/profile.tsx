@@ -299,7 +299,8 @@ export default function CustomerProfileScreen() {
 
   function handleAuthSuccess() {
     setAuthModal(null);
-    router.replace('/(customer)');
+    const role = useAuthStore.getState().user?.role;
+    router.replace(role === 'ecoservice' ? '/(ecoservice)' : '/(customer)');
   }
 
   const initial = user?.email ? user.email[0].toUpperCase() : '?';
