@@ -1,37 +1,29 @@
 // services/recomendacion.js
-const pool = require('../db');
+const pool = require('./db');
 
-// Función 1: Obtener las categorías ordenadas del usuario
+// Funcionalidad 1: Obtener categorías favoritas del usuario
 async function obtenerCategoriasPonderadas(id_customer) {
-    // Usamos customer_intereses y su columna score_interes directamente
     const query = `
-        SELECT 
-            id_categoria,
-            score_interes AS puntaje
-        FROM customer_intereses
-        WHERE id_customer = $1
-        ORDER BY score_interes DESC;
+        SELECT id_categoria, SUM(score_interes) as puntaje 
+        FROM customer_intereses 
+        WHERE id_customer = $1 
+        GROUP BY id_categoria 
+        ORDER BY puntaje DESC
     `;
     const { rows } = await pool.query(query, [id_customer]);
-    return rows; 
+    return rows.map(r => ({ id_categoria: r.id_categoria, puntaje: parseInt(r.puntaje) }));
 }
 
-// Función 2: El algoritmo de 80/20 para Ecoservices
+// Funcionalidad 2: Feed de Ecoservices (Algoritmo 80/20)
 async function obtenerRecomendaciones(id_customer) {
-    // 1. Obtener los gustos del usuario
     const categoriasTop = await obtenerCategoriasPonderadas(id_customer);
-    
-    // Si no tiene preferencias registradas, retornamos un array vacío (o podrías retornar los más populares)
     if (categoriasTop.length === 0) return [];
 
-    // Convertimos las preferencias a un diccionario rápido: { '1': 50, '3': 14 ... }
     const mapaPuntajes = {};
     categoriasTop.forEach(cat => {
         mapaPuntajes[cat.id_categoria] = cat.puntaje;
     });
-    
-    // 2. Obtener todos los Ecoservices aprobados y sus categorías
-    // Como las categorías están en los productos, hacemos un JOIN y agrupamos (array_agg)
+
     const negociosQuery = `
         SELECT 
             e.id_ecoservice,
@@ -43,11 +35,8 @@ async function obtenerRecomendaciones(id_customer) {
     `;
     const { rows: ecoservicesDisponibles } = await pool.query(negociosQuery);
 
-    // 3. Calcular el "Match Score"
     const candidatosPuntuados = ecoservicesDisponibles.map(negocio => {
         let score = 0;
-
-        // Sumar puntos por categorías coincidentes basadas en los productos del ecoservicio
         if (negocio.categorias_ids && negocio.categorias_ids[0] !== null) {
             negocio.categorias_ids.forEach(catId => {
                 if (mapaPuntajes[catId]) {
@@ -55,37 +44,57 @@ async function obtenerRecomendaciones(id_customer) {
                 }
             });
         }
-
         return { id: negocio.id_ecoservice, score };
     });
 
-    // 4. Ordenar por puntuación (Mayor a menor)
     candidatosPuntuados.sort((a, b) => b.score - a.score);
 
-    // 5. Aplicar 80% Explotación / 20% Exploración
     const BATCH_SIZE = 10;
     const EXPLOITATION_COUNT = 8;
     
-    // Si hay menos de 10 negocios, ajustamos los límites para evitar errores
     const limiteExplotacion = Math.min(EXPLOITATION_COUNT, candidatosPuntuados.length);
     const explotacion = candidatosPuntuados.slice(0, limiteExplotacion);
     
     const sobrantes = candidatosPuntuados.slice(limiteExplotacion);
-    
-    // Mezclar los sobrantes y tomar aleatorios para exploración
     sobrantes.sort(() => 0.5 - Math.random());
+    
     const limiteExploracion = Math.min(BATCH_SIZE - limiteExplotacion, sobrantes.length);
     const exploracion = sobrantes.slice(0, limiteExploracion);
 
-    // 6. Juntar y mezclar el lote final para no hacer predecible el Feed
     const loteFinal = [...explotacion, ...exploracion];
     loteFinal.sort(() => 0.5 - Math.random());
 
-    // Retornar solo el array de IDs
     return loteFinal.map(item => item.id);
+}
+
+// Funcionalidad 3: Feed de Productos mezclados de los mejores Ecoservices
+async function obtenerProductosRecomendados(id_customer) {
+    // 1. Obtenemos los IDs de los mejores ecoservices para este usuario (usando la Funcionalidad 2)
+    const ecoservicesIds = await obtenerRecomendaciones(id_customer);
+
+    // Si no hay ecoservices recomendados, devolvemos un arreglo vacío
+    if (ecoservicesIds.length === 0) return [];
+
+    // 2. Buscamos TODOS los productos que pertenecen a ese lote selecto de ecoservices
+    const productosQuery = `
+        SELECT id_producto 
+        FROM productos 
+        WHERE id_ecoservice = ANY($1::int[])
+    `;
+    // Pasamos el array de IDs directamente a la consulta SQL
+    const { rows } = await pool.query(productosQuery, [ecoservicesIds]);
+
+    // 3. Extraemos solo los números (IDs)
+    const productosIds = rows.map(row => row.id_producto);
+
+    // 4. La Magia: Mezclamos la lista completa al azar para que el feed sea variado
+    productosIds.sort(() => 0.5 - Math.random());
+
+    return productosIds;
 }
 
 module.exports = {
     obtenerCategoriasPonderadas,
-    obtenerRecomendaciones
+    obtenerRecomendaciones,
+    obtenerProductosRecomendados
 };
